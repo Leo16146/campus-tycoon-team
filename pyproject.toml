@@ -1,0 +1,11 @@
+[project]
+name = "campus-tycoon"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["streamlit"]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
