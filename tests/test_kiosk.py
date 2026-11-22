@@ -4,7 +4,7 @@ from contextlib import closing
 import pytest
 
 import db
-from logic import demand, sales_for_product
+from logic import NORMAL, demand, sales_for_product
 
 
 @pytest.fixture
@@ -83,13 +83,14 @@ def test_invalid_purchase(kiosk, quantity):
 
 @pytest.mark.parametrize(("price", "expected"), [(400, 10), (401, 5), (800, 5), (801, 0)])
 def test_demand_boundaries(price, expected):
-    assert demand(price, 400) == expected
+    # Spec test 19: the solo rule is the "Normal day" tier (10, 5).
+    assert demand(price, 400, NORMAL) == expected
 
 
 @pytest.mark.parametrize("stock", [0, 3])
 def test_limited_stock(stock):
     product = dict(stock=stock, price=400, reference=400, cost=200)
-    assert sales_for_product(product) == (stock, stock * 400, stock * 200, stock * 200)
+    assert sales_for_product(product, NORMAL) == (stock, stock * 400, stock * 200, stock * 200)
 
 
 def test_mixed_sales(kiosk):

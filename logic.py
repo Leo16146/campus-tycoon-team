@@ -5,9 +5,30 @@ import re
 
 STARTING_CASH = 10000
 
+TRADING_DAYS = 5
+
 # Scenario keys are stored with each game. Never redefine an existing key.
-# Daily events per scenario follow in P2 (specs/campus-week.md).
 SCENARIOS = {"exam_week": "Exam Week", "heatwave": "Heatwave"}
+
+# Demand per product as (at or below the reference price, up to twice the reference price).
+# Above twice the reference price demand is always 0. The solo rule is (10, 5).
+NORMAL = (10, 5)
+EVENTS = {
+    "exam_week": [
+        ("Normal day", {"Kaffee": NORMAL, "Wasser": NORMAL, "Müsliriegel": NORMAL}),
+        ("Revision rush", {"Kaffee": (20, 10), "Wasser": NORMAL, "Müsliriegel": NORMAL}),
+        ("Exam day", {"Kaffee": (20, 10), "Wasser": NORMAL, "Müsliriegel": NORMAL}),
+        ("Open Day", {"Kaffee": (14, 0), "Wasser": (14, 0), "Müsliriegel": (14, 0)}),
+        ("Normal day", {"Kaffee": NORMAL, "Wasser": NORMAL, "Müsliriegel": NORMAL}),
+    ],
+    "heatwave": [
+        ("Warm morning", {"Kaffee": NORMAL, "Wasser": (16, 8), "Müsliriegel": NORMAL}),
+        ("Heatwave", {"Kaffee": (6, 3), "Wasser": (24, 12), "Müsliriegel": (8, 4)}),
+        ("Heatwave", {"Kaffee": (6, 3), "Wasser": (24, 12), "Müsliriegel": (8, 4)}),
+        ("Sports day", {"Kaffee": (8, 4), "Wasser": (30, 3), "Müsliriegel": (12, 2)}),
+        ("Cool change", {"Kaffee": (12, 6), "Wasser": NORMAL, "Müsliriegel": NORMAL}),
+    ],
+}
 
 
 def price_in_cents(text):
@@ -37,18 +58,26 @@ def purchase_cost(quantity, unit_cost, cash):
     return cost
 
 
-def demand(price, reference):
+def todays_event(scenario, day):
+    """Return the event name and the demand tiers per product for trading days 1 to 5."""
+    if not 1 <= day <= TRADING_DAYS:
+        raise ValueError("There is no event after the fifth trading day.")
+    return EVENTS[scenario][day - 1]
+
+
+def demand(price, reference, tiers):
+    at_reference, up_to_double = tiers
     if price <= 0:
         raise ValueError("The selling price must be positive.")
     if price <= reference:
-        return 10
+        return at_reference
     if price <= 2 * reference:
-        return 5
+        return up_to_double
     return 0
 
 
-def sales_for_product(product):
-    sold = min(product["stock"], demand(product["price"], product["reference"]))
+def sales_for_product(product, tiers):
+    sold = min(product["stock"], demand(product["price"], product["reference"], tiers))
     revenue = sold * product["price"]
     expense = sold * product["cost"]
     return sold, revenue, expense, revenue - expense
