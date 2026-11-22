@@ -4,7 +4,7 @@ from pathlib import Path
 import streamlit as st
 
 import db
-from logic import SCENARIOS, demand, final_result, sales_for_product
+from logic import SCENARIOS, demand, final_result, sales_for_product, todays_event
 
 
 DATABASE = Path(os.environ.get("CAMPUS_TYCOON_DB", Path(__file__).with_name("campus_week.sqlite3")))
@@ -155,6 +155,15 @@ st.table([{"Product": PRODUCT_LABELS[p["name"]], "Stock": p["stock"], "Unit cost
 show_notice()
 
 if day <= 5:
+    event_name, tiers = todays_event(game["scenario"], day)
+    st.subheader(f"Today's event: {event_name}")
+    st.table([{"Product": PRODUCT_LABELS[p["name"]],
+               "Demand at or below reference price": tiers[p["name"]][0],
+               "Demand above reference price, up to and including twice it": tiers[p["name"]][1]}
+              for p in products])
+    st.info("Above twice the reference price, demand is 0. "
+            "At twice the reference price, each unit earns three times as much gross profit "
+            "as at the reference price. Sales are limited to the stock on hand.")
     st.subheader("Buy stock")
     by_name = {p["name"]: p for p in products}
     name = st.selectbox("Product", list(by_name), format_func=PRODUCT_LABELS.__getitem__, key="product")
@@ -170,13 +179,12 @@ if day <= 5:
         st.session_state[key] = f"{whole}.{fraction:02d}"
         st.text_input(f"{PRODUCT_LABELS[name]} (€)", key=key, max_chars=21,
                       on_change=save_price, args=(token, day, name))
-        daily_demand = demand(product["price"], product["reference"])
-        expected_units = sales_for_product(product)[0]
+        daily_demand = demand(product["price"], product["reference"], tiers[name])
+        expected_units = sales_for_product(product, tiers[name])[0]
         st.caption(f"Demand: {daily_demand} · In stock: {product['stock']} · Expected sales: {expected_units}")
     st.subheader("Trading")
-    st.write("Daily demand is 10 units per product at or below its reference price. "
-             "Above that price, demand falls to 5 units, or to 0 if the price exceeds "
-             "twice the reference price. Sales are limited to the stock on hand.")
+    st.write("Today's demand depends on the event shown above and on each selling price. "
+             "Sales are limited to the stock on hand. Unsold stock stays in the inventory.")
     st.button("Start trading day", type="primary", on_click=trade_day, args=(token, day))
 
 else:

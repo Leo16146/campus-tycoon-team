@@ -5,7 +5,8 @@ import secrets
 import sqlite3
 from contextlib import closing
 
-from logic import SCENARIOS, STARTING_CASH, price_in_cents, purchase_cost, sales_for_product
+from logic import (SCENARIOS, STARTING_CASH, price_in_cents, purchase_cost,
+                   sales_for_product, todays_event)
 
 
 CATALOG = [("Kaffee", 200, 400), ("Wasser", 50, 100), ("Müsliriegel", 100, 200)]
@@ -142,12 +143,13 @@ def trade(path, token, day):
     with closing(connect(path)) as conn, conn:
         conn.execute("BEGIN IMMEDIATE")
         game = current_game(conn, token, day)
+        _, tiers = todays_event(game["scenario"], day)
         total_revenue = 0
         products = conn.execute("SELECT * FROM products WHERE game_id = ? ORDER BY position",
                                 (game["id"],)).fetchall()
         for product in products:
-            sold, revenue, expense, profit = sales_for_product(product)
             name = product["name"]
+            sold, revenue, expense, profit = sales_for_product(product, tiers[name])
             conn.execute("INSERT INTO sales VALUES (?, ?, ?, ?, ?, ?, ?)",
                          (game["id"], day, name, sold, revenue, expense, profit))
             conn.execute("UPDATE products SET stock = stock - ? WHERE game_id = ? AND name = ?",

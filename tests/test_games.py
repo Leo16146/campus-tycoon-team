@@ -86,9 +86,10 @@ def test_trade_and_history_stay_within_their_own_game(path):
     assert [(row["day"], row["name"], row["sold"], row["revenue"]) for row in history_a] == [
         (1, "Kaffee", 6, 2400), (1, "Wasser", 0, 0), (1, "Müsliriegel", 0, 0),
         (2, "Kaffee", 0, 0), (2, "Wasser", 0, 0), (2, "Müsliriegel", 4, 800)]
+    # B is Heatwave: "Warm morning" water demand is 8 at €1.50, so all 8 sell.
     history_b = b_before[2]
     assert [(row["day"], row["name"], row["sold"], row["revenue"]) for row in history_b] == [
-        (1, "Kaffee", 0, 0), (1, "Wasser", 5, 750), (1, "Müsliriegel", 0, 0)]
+        (1, "Kaffee", 0, 0), (1, "Wasser", 8, 1200), (1, "Müsliriegel", 0, 0)]
 
 
 def test_delete_removes_only_its_own_game(path):
