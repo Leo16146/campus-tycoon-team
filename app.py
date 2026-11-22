@@ -5,7 +5,7 @@ import streamlit as st
 
 import db
 from logic import (CATALOG, PRODUCT_LABELS, SCENARIOS, baseline_results, demand, final_result,
-                   price_in_cents, sales_for_product, todays_event)
+                   history_csv, price_in_cents, sales_for_product, todays_event)
 
 
 DATABASE = Path(os.environ.get("CAMPUS_TYCOON_DB", Path(__file__).with_name("campus_week.sqlite3")))
@@ -426,6 +426,10 @@ else:
 
 if history:
     st.subheader("Daily results")
+    # The file name contains only the scenario, never the private game link.
+    st.download_button("Download daily results (CSV)", data=history_csv(history),
+                       file_name=f"campus-week-{game['scenario'].replace('_', '-')}.csv",
+                       mime="text/csv")
     for completed_day in range(day - 1, 0, -1):
         lines = [row for row in history if row["day"] == completed_day]
         totals = {key: sum(row[key] for row in lines)
