@@ -9,6 +9,8 @@ from logic import EVENTS, NORMAL, SCENARIOS, demand, sales_for_product, todays_e
 
 
 APP = Path(__file__).resolve().parents[1] / "app.py"
+# AppTest runs use a 60 s timeout: the first run in a fresh environment imports
+# pandas and pyarrow and took about 16 s in a clean clone.
 PRODUCTS = ["Kaffee", "Wasser", "Müsliriegel"]
 
 
@@ -156,7 +158,7 @@ def test_same_actions_differ_by_scenario(path):
 
 
 def open_app(token):
-    page = AppTest.from_file(str(APP), default_timeout=10)
+    page = AppTest.from_file(str(APP), default_timeout=60)
     page.query_params["game"] = token
     return page.run()
 

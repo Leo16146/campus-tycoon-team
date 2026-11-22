@@ -9,6 +9,8 @@ from logic import NORMAL, baseline_restock, baseline_results, final_result
 
 
 APP = Path(__file__).resolve().parents[1] / "app.py"
+# AppTest runs use a 60 s timeout: the first run in a fresh environment imports
+# pandas and pyarrow and took about 16 s in a clean clone.
 PRODUCTS = ["Kaffee", "Wasser", "Müsliriegel"]
 PREMIUM = ("8.00", "2.00", "4.00")
 REFERENCE = ("4.00", "1.00", "2.00")
@@ -113,7 +115,7 @@ def test_baseline_restock_counts_existing_stock():
 
 
 def open_app(token):
-    page = AppTest.from_file(str(APP), default_timeout=10)
+    page = AppTest.from_file(str(APP), default_timeout=60)
     page.query_params["game"] = token
     return page.run()
 

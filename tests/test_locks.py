@@ -10,6 +10,8 @@ import db
 
 
 APP = Path(__file__).resolve().parents[1] / "app.py"
+# AppTest runs use a 60 s timeout: the first run in a fresh environment imports
+# pandas and pyarrow and took about 16 s in a clean clone.
 
 
 @pytest.fixture
@@ -119,7 +121,7 @@ def click(page, label):
 
 def test_app_shows_the_lock_and_buys_once_after_release(path):
     token = db.create_game(path, "exam_week")
-    page = AppTest.from_file(str(APP), default_timeout=10)
+    page = AppTest.from_file(str(APP), default_timeout=60)
     page.query_params["game"] = token
     page.run()
     page.number_input[0].set_value(10).run()
@@ -136,7 +138,7 @@ def test_app_shows_the_lock_and_buys_once_after_release(path):
 
 def test_app_page_load_offers_try_again(path):
     token = db.create_game(path, "exam_week")
-    page = AppTest.from_file(str(APP), default_timeout=10)
+    page = AppTest.from_file(str(APP), default_timeout=60)
     page.query_params["game"] = token
     with locked(path, "EXCLUSIVE"):
         page.run()
@@ -156,7 +158,7 @@ def test_app_reports_a_lock_while_loading_the_game(path, monkeypatch):
         raise db.DatabaseBusy(db.BUSY)
 
     monkeypatch.setattr(db, "load", busy_load)
-    page = AppTest.from_file(str(APP), default_timeout=10)
+    page = AppTest.from_file(str(APP), default_timeout=60)
     page.query_params["game"] = token
     page.run()
     assert not page.exception
@@ -173,7 +175,7 @@ def test_app_does_not_retry_a_busy_purchase(path, monkeypatch):
         calls.append(args)
         raise db.DatabaseBusy(db.BUSY)
 
-    page = AppTest.from_file(str(APP), default_timeout=10)
+    page = AppTest.from_file(str(APP), default_timeout=60)
     page.query_params["game"] = token
     page.run()
     monkeypatch.setattr(db, "buy", busy_buy)
