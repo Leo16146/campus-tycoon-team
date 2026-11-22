@@ -37,6 +37,22 @@ def labels(page):
     return [button.label for button in page.button]
 
 
+def plan(page, name, buy=None, price=None):
+    """Type into today's plan for one product; nothing is saved before "Apply"."""
+    if buy is not None:
+        page.number_input(key=f"buy_{name}").set_value(buy).run()
+    if price is not None:
+        page.text_input(key=f"price_{name}").set_value(price).run()
+
+
+def product_captions(page):
+    return [c.value for c in page.caption if "In stock:" in c.value]
+
+
+def total_line(page):
+    return next(m.value for m in page.markdown if m.value.startswith("Total purchase cost"))
+
+
 def test_start_page_without_game_link(path):
     # Spec test 14c.
     other = db.create_game(path, "exam_week")
@@ -79,8 +95,8 @@ def test_start_another_game_keeps_the_current_game(path):
     page = open_app()
     click(page, "Start game")
     a = page.query_params["game"]
-    page.number_input[0].set_value(3).run()
-    click(page, "Buy")
+    plan(page, "Kaffee", buy=3)
+    click(page, "Apply purchases and prices")
     a_before = db.load(path, a)
     assert "Bookmark its link" in page.caption[-1].value
     click(page, "Start another game")
@@ -116,15 +132,18 @@ def test_clicks_and_new_session(path):
     token = page.query_params["game"]
     assert len(token) == 43
     assert page.caption[0].value == "Scenario: Heatwave"
-    assert page.selectbox[0].options == ["Coffee", "Water", "Granola bar"]
-    page.number_input[0].set_value(10).run()
-    assert "€20.00" in page.markdown[0].value
-    click(page, "Buy")
+    assert [n.label for n in page.number_input] == ["Buy Coffee", "Buy Water", "Buy Granola bar"]
+    plan(page, "Kaffee", buy=10)
+    assert "€20.00" in total_line(page)
+    click(page, "Apply purchases and prices")
     assert page.metric[0].value == "€80.00"
-    page.number_input[0].set_value(41).run()
-    assert "€82.00" in page.markdown[0].value
-    click(page, "Buy")
+    plan(page, "Kaffee", buy=41)
+    assert "€82.00" in total_line(page)
+    click(page, "Apply purchases and prices")
     assert "cash" in page.error[0].value
+    # The rejected plan stays in the fields and blocks trading until it is discarded.
+    assert next(b for b in page.button if b.label == "Start trading day").disabled
+    click(page, "Discard changes")
     click(page, "Start trading day")
     page.run()
     for view in (page, open_app(token)):
@@ -156,13 +175,14 @@ def test_switching_links_clears_inputs_of_the_previous_game(path):
     a = db.create_game(path, "exam_week")
     b = db.create_game(path, "exam_week")
     page = open_app(a)
-    page.number_input[0].set_value(7).run()
+    plan(page, "Kaffee", buy=7, price="9.00")
     click(page, "Delete this game")
     assert page.warning
     page.query_params["game"] = b
     page.run()
     assert not page.exception
-    assert page.number_input[0].value == 1
+    assert page.number_input(key="buy_Kaffee").value == 0
+    assert page.text_input(key="price_Kaffee").value == "4.00"
     assert not page.warning
     assert labels(page)[-2:] == ["Delete this game", "Start another game"]
     assert db.load(path, a)[0]["day"] == 1
@@ -232,16 +252,22 @@ def test_final_result_values_remaining_stock_at_cost(path):
 def test_edited_price_persists_and_changes_sales(path):
     token = db.create_game(path, "exam_week")
     page = open_app(token)
-    assert page.caption[2].value == "Demand: 10 · In stock: 0 · Expected sales: 0"
-    page.number_input[0].set_value(10).run()
-    click(page, "Buy")
-    assert page.caption[2].value == "Demand: 10 · In stock: 10 · Expected sales: 10"
-    page.text_input[0].set_value("4.01").run()
-    assert page.caption[2].value == "Demand: 5 · In stock: 10 · Expected sales: 5"
+    assert product_captions(page)[0] == "Demand: 10 · In stock: 0 · Expected sales: 0 · Cost: €0.00"
+    plan(page, "Kaffee", buy=10)
+    click(page, "Apply purchases and prices")
+    assert product_captions(page)[0] == "Demand: 10 · In stock: 10 · Expected sales: 10 · Cost: €0.00"
+    plan(page, "Kaffee", price="4.01")
+    assert product_captions(page)[0] == "Demand: 5 · In stock: 10 · Expected sales: 5 · Cost: €0.00"
+    click(page, "Apply purchases and prices")
     page = open_app(token)
-    assert page.text_input[0].value == "4.01"
-    page.text_input[0].set_value("-2").run()
-    assert page.error and page.text_input[0].value == "4.01"
+    assert page.text_input(key="price_Kaffee").value == "4.01"
+    plan(page, "Kaffee", price="-2")
+    click(page, "Apply purchases and prices")
+    # Rejected: the saved price stays €4.01 and the typed text stays for correction.
+    assert page.error and page.text_input(key="price_Kaffee").value == "-2"
+    assert db.load(path, token)[1][0]["price"] == 401
+    click(page, "Discard changes")
+    assert page.text_input(key="price_Kaffee").value == "4.01"
     click(page, "Start trading day")
     page = open_app(token)
     assert not page.exception

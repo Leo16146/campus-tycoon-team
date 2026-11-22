@@ -4,8 +4,8 @@ from pathlib import Path
 import streamlit as st
 
 import db
-from logic import (SCENARIOS, baseline_results, demand, final_result, sales_for_product,
-                   todays_event)
+from logic import (CATALOG, SCENARIOS, baseline_results, demand, final_result, price_in_cents,
+                   sales_for_product, todays_event)
 
 
 DATABASE = Path(os.environ.get("CAMPUS_TYCOON_DB", Path(__file__).with_name("campus_week.sqlite3")))
@@ -19,8 +19,19 @@ BUSY_LOADING = "The game is busy right now and could not be loaded. Please try a
 # Errors that are shown to the player as a message instead of a crash.
 USER_ERRORS = (ValueError, db.DatabaseBusy)
 
+# Input fields of today's plan: purchases and selling prices per product.
+NAMES = [name for name, _, _ in CATALOG]
+DRAFT_KEYS = tuple(f"buy_{name}" for name in NAMES) + tuple(f"price_{name}" for name in NAMES)
+
 # Session values that belong to one game and must not carry over to another link.
-GAME_SESSION_KEYS = ("product", "quantity", "confirm_delete", "notice")
+GAME_SESSION_KEYS = ("confirm_delete", "notices", "draft_of") + DRAFT_KEYS
+
+HOW_TO_PLAY = (
+    "**How to play**\n\n"
+    "- **Goal:** end the five trading days with the highest possible overall gain.\n"
+    "- **Each day:** check today's event, buy stock, set selling prices, start the trading day.\n"
+    "- **Score:** final cash + remaining stock at unit cost − €100.00, compared with a "
+    "simple baseline strategy.")
 
 
 def euros(cents):
@@ -47,20 +58,100 @@ def sales_summary_row(label, sales):
     }
 
 
-def show_notice():
-    if "notice" in st.session_state:
-        kind, message = st.session_state.pop("notice")
-        if kind == "success":
-            st.success(message)
-        else:
-            st.error(message)
+def price_text(cents):
+    whole, fraction = divmod(cents, 100)
+    return f"{whole}.{fraction:02d}"
+
+
+def parsed_price(text):
+    """Price in cents, or None if the text is not a valid price."""
+    try:
+        return price_in_cents(text)
+    except ValueError:
+        return None
+
+
+def notify(kind, message):
+    """Queue a message (success, info, warning or error) for the next page run."""
+    st.session_state.setdefault("notices", []).append((kind, message))
+
+
+def show_notices():
+    show = {"success": st.success, "info": st.info, "warning": st.warning, "error": st.error}
+    for kind, message in st.session_state.pop("notices", []):
+        show[kind](message)
+
+
+def draft_changed(saved_prices):
+    """True if the plan fields differ from the saved game.
+
+    A purchase above 0, an invalid price or a price with another amount counts as a
+    change; "4" and "4.00" are the same price. Fields without a value are untouched.
+    """
+    for name in NAMES:
+        if st.session_state.get(f"buy_{name}", 0) > 0:
+            return True
+        text = st.session_state.get(f"price_{name}")
+        if text is not None and parsed_price(text) != saved_prices[name]:
+            return True
+    return False
+
+
+def clear_draft():
+    for key in DRAFT_KEYS:
+        st.session_state.pop(key, None)
+
+
+def fill_draft(products):
+    """Give fields that have no value yet the saved values. An emptied field stays empty."""
+    for product in products:
+        name = product["name"]
+        if f"buy_{name}" not in st.session_state:
+            st.session_state[f"buy_{name}"] = 0
+        if f"price_{name}" not in st.session_state:
+            st.session_state[f"price_{name}"] = price_text(product["price"])
+
+
+def follow_saved_state(token, seen):
+    """Discard a plan that was made for an older saved state, for example after
+    another window finished the day or applied its own plan. A message appears
+    only if the plan differed from the state it was made for."""
+    owner = (db.token_hash(token), seen)
+    previous = st.session_state.get("draft_of")
+    if previous is not None and previous != owner:
+        old_day, _, old_products = previous[1]
+        if draft_changed({name: price for name, _, price in old_products}):
+            if old_day != seen[0]:
+                notify("warning", "Your plan was discarded because the trading day changed.")
+            else:
+                notify("warning", "Your plan was discarded because the game was changed "
+                                  "in another window.")
+        clear_draft()
+    st.session_state.draft_of = owner
+
+
+def preview_text(product, quantity, text, tiers):
+    cost = euros(quantity * product["cost"])
+    price = parsed_price(text)
+    if price is None:
+        return f"Invalid price · In stock: {product['stock']} · Cost: {cost}"
+    planned = dict(product, stock=product["stock"] + quantity, price=price)
+    daily_demand = demand(price, product["reference"], tiers)
+    expected_units = sales_for_product(planned, tiers)[0]
+    return (f"Demand: {daily_demand} · In stock: {product['stock']} · "
+            f"Expected sales: {expected_units} · Cost: {cost}")
+
+
+def plan_message(quantities):
+    bought = [f"{quantity} × {PRODUCT_LABELS[name]}" for name, quantity in quantities.items() if quantity]
+    return (f"Bought {', '.join(bought)}. " if bought else "") + "Prices saved."
 
 
 def start_game(scenario):
     try:
         st.query_params["game"] = db.create_game(DATABASE, scenario)
     except USER_ERRORS as error:
-        st.session_state.notice = ("error", str(error))
+        notify("error", str(error))
 
 
 def leave_game():
@@ -76,29 +167,33 @@ def forget_other_game(token):
         st.session_state.active_game = active
 
 
-def buy_selected(token, day, name, quantity):
+def apply_plan(token, day, saved_prices, seen):
+    """Apply all purchases and prices together. After a rejection the inputs stay."""
+    if not draft_changed(saved_prices):
+        notify("info", "Nothing to apply.")
+        return
+    quantities = {name: st.session_state[f"buy_{name}"] for name in NAMES}
+    prices = {name: st.session_state[f"price_{name}"] for name in NAMES}
     try:
-        db.buy(DATABASE, token, day, name, quantity)
-        st.session_state.notice = ("success", f"Purchased {quantity} × {PRODUCT_LABELS[name]}.")
+        db.apply_plan(DATABASE, token, day, quantities, prices, seen)
     except USER_ERRORS as error:
-        st.session_state.notice = ("error", str(error))
+        notify("error", str(error))
+        return
+    notify("success", plan_message(quantities))
+    clear_draft()
 
 
-def save_price(token, day, name):
-    key = f"price_{name}"
+def trade_day(token, day, saved_prices, seen):
+    if draft_changed(saved_prices):
+        notify("error", "Apply or discard your changes before trading.")
+        return
     try:
-        db.set_price(DATABASE, token, day, name, st.session_state[key])
-        st.session_state.notice = ("success", f"Selling price saved for {PRODUCT_LABELS[name]}.")
+        db.trade(DATABASE, token, day, seen)
     except USER_ERRORS as error:
-        st.session_state.notice = ("error", str(error))
-
-
-def trade_day(token, day):
-    try:
-        db.trade(DATABASE, token, day)
-        st.session_state.notice = ("success", f"Day {day} complete.")
-    except USER_ERRORS as error:
-        st.session_state.notice = ("error", str(error))
+        notify("error", str(error))
+        return
+    notify("success", f"Day {day} complete.")
+    clear_draft()
 
 
 def ask_delete():
@@ -115,9 +210,9 @@ def delete_current_game(token):
     try:
         db.delete_game(DATABASE, token)
     except USER_ERRORS as error:
-        st.session_state.notice = ("error", str(error))
+        notify("error", str(error))
         return
-    st.session_state.notice = ("success", "Game deleted.")
+    notify("success", "Game deleted.")
     st.query_params.clear()
 
 
@@ -152,7 +247,9 @@ except ValueError as error:
     st.stop()
 
 if "game" not in st.query_params:
-    show_notice()
+    show_notices()
+    with st.container(border=True):
+        st.markdown(HOW_TO_PLAY)
     st.subheader("Start a private game")
     st.write("Each game has its own private link. Anyone with the link can play or delete the game.")
     scenario = st.radio("Scenario", list(SCENARIOS), format_func=SCENARIOS.__getitem__, key="scenario")
@@ -169,6 +266,9 @@ except ValueError as error:
     stop_with_link_error(str(error))
 
 day = game["day"]
+saved_prices = {p["name"]: p["price"] for p in products}
+seen = db.snapshot(game, products)
+follow_saved_state(token, seen)
 st.caption(f"Scenario: {SCENARIOS[game['scenario']]}")
 st.info("Bookmark this page to continue later. Games are stored temporarily on the server "
         "and may be removed, for example after a restart.")
@@ -182,7 +282,7 @@ st.table([{"Product": PRODUCT_LABELS[p["name"]], "Stock": p["stock"], "Unit cost
            "Reference price": euros(p["reference"]), "Selling price": euros(p["price"])}
           for p in products])
 
-show_notice()
+show_notices()
 
 if day <= 5:
     event_name, tiers = todays_event(game["scenario"], day)
@@ -194,28 +294,36 @@ if day <= 5:
     st.info("Above twice the reference price, demand is 0. "
             "At twice the reference price, each unit earns three times as much gross profit "
             "as at the reference price. Sales are limited to the stock on hand.")
-    st.subheader("Buy stock")
-    by_name = {p["name"]: p for p in products}
-    name = st.selectbox("Product", list(by_name), format_func=PRODUCT_LABELS.__getitem__, key="product")
-    quantity = st.number_input("Quantity", min_value=1, step=1, value=1, key="quantity")
-    st.write(f"Purchase total: **{euros(quantity * by_name[name]['cost'])}**")
-    st.button("Buy", on_click=buy_selected, args=(token, day, name, quantity))
-    st.subheader("Selling prices")
-    st.caption("Enter a price in euros and press Enter to save it.")
+    st.subheader("Plan today")
+    st.caption("Enter purchases and selling prices for all products, check the preview, "
+               "then apply them together. Nothing is saved before you apply.")
+    fill_draft(products)
+    total = 0
     for product in products:
         name = product["name"]
-        key = f"price_{name}"
-        whole, fraction = divmod(product["price"], 100)
-        st.session_state[key] = f"{whole}.{fraction:02d}"
-        st.text_input(f"{PRODUCT_LABELS[name]} (€)", key=key, max_chars=21,
-                      on_change=save_price, args=(token, day, name))
-        daily_demand = demand(product["price"], product["reference"], tiers[name])
-        expected_units = sales_for_product(product, tiers[name])[0]
-        st.caption(f"Demand: {daily_demand} · In stock: {product['stock']} · Expected sales: {expected_units}")
+        buy_col, price_col = st.columns(2)
+        quantity = buy_col.number_input(f"Buy {PRODUCT_LABELS[name]}", min_value=0, step=1,
+                                        key=f"buy_{name}")
+        text = price_col.text_input(f"{PRODUCT_LABELS[name]} selling price (€)", max_chars=21,
+                                    key=f"price_{name}")
+        st.caption(preview_text(product, quantity, text, tiers[name]))
+        total += quantity * product["cost"]
+    st.write(f"Total purchase cost: **{euros(total)}** · "
+             f"Cash after purchases: **{euros(game['cash'] - total)}**")
+    if total > game["cash"]:
+        st.warning("The total purchase cost is more than your cash.")
+    changed = draft_changed(saved_prices)
+    apply_col, discard_col = st.columns(2)
+    apply_col.button("Apply purchases and prices", on_click=apply_plan,
+                     args=(token, day, saved_prices, seen))
+    discard_col.button("Discard changes", on_click=clear_draft, disabled=not changed)
     st.subheader("Trading")
     st.write("Today's demand depends on the event shown above and on each selling price. "
              "Sales are limited to the stock on hand. Unsold stock stays in the inventory.")
-    st.button("Start trading day", type="primary", on_click=trade_day, args=(token, day))
+    st.button("Start trading day", type="primary", on_click=trade_day,
+              args=(token, day, saved_prices, seen), disabled=changed)
+    if changed:
+        st.caption("Apply or discard your changes before trading.")
 
 else:
     stock_value, result = final_result(game["cash"], products)

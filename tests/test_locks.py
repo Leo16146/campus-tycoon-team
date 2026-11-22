@@ -124,14 +124,15 @@ def test_app_shows_the_lock_and_buys_once_after_release(path):
     page = AppTest.from_file(str(APP), default_timeout=60)
     page.query_params["game"] = token
     page.run()
-    page.number_input[0].set_value(10).run()
+    page.number_input(key="buy_Kaffee").set_value(10).run()
     with locked(path):
-        click(page, "Buy")
+        click(page, "Apply purchases and prices")
     assert "busy right now" in page.error[0].value
     game, products, _ = db.load(path, token)
     assert (game["cash"], products[0]["stock"]) == (10000, 0)
-    click(page, "Buy")
-    assert page.success[0].value == "Purchased 10 × Coffee."
+    assert page.number_input(key="buy_Kaffee").value == 10
+    click(page, "Apply purchases and prices")
+    assert page.success[0].value == "Bought 10 × Coffee. Prices saved."
     game, products, _ = db.load(path, token)
     assert (game["cash"], products[0]["stock"]) == (8000, 10)
 
@@ -174,15 +175,16 @@ def test_app_does_not_retry_a_busy_purchase(path, monkeypatch):
     token = db.create_game(path, "exam_week")
     calls = []
 
-    def busy_buy(*args):
+    def busy_apply(*args):
         calls.append(args)
         raise db.DatabaseBusy(db.BUSY)
 
     page = AppTest.from_file(str(APP), default_timeout=60)
     page.query_params["game"] = token
     page.run()
-    monkeypatch.setattr(db, "buy", busy_buy)
-    click(page, "Buy")
+    page.number_input(key="buy_Kaffee").set_value(4).run()
+    monkeypatch.setattr(db, "apply_plan", busy_apply)
+    click(page, "Apply purchases and prices")
     assert len(calls) == 1
     assert "busy right now" in page.error[0].value
     assert db.load(path, token)[0]["cash"] == 10000
