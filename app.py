@@ -4,14 +4,17 @@ from pathlib import Path
 import streamlit as st
 
 import db
-from logic import demand, final_result, sales_for_product
+from logic import SCENARIOS, demand, final_result, sales_for_product
 
 
-DATABASE = Path(os.environ.get("CAMPUS_TYCOON_DB", Path(__file__).with_name("kiosk.sqlite3")))
+DATABASE = Path(os.environ.get("CAMPUS_TYCOON_DB", Path(__file__).with_name("campus_week.sqlite3")))
 
 
 # Saved games use the original product names as SQLite keys.
 PRODUCT_LABELS = {"Kaffee": "Coffee", "Wasser": "Water", "Müsliriegel": "Granola bar"}
+
+# Session values that belong to one game and must not carry over to another link.
+GAME_SESSION_KEYS = ("product", "quantity", "confirm_delete", "notice")
 
 
 def euros(cents):
@@ -29,43 +32,116 @@ def sales_summary_row(label, sales):
     }
 
 
-def buy_selected(day, name, quantity):
+def show_notice():
+    if "notice" in st.session_state:
+        kind, message = st.session_state.pop("notice")
+        if kind == "success":
+            st.success(message)
+        else:
+            st.error(message)
+
+
+def start_game(scenario):
+    st.query_params["game"] = db.create_game(DATABASE, scenario)
+
+
+def leave_game():
+    st.query_params.clear()
+
+
+def forget_other_game(token):
+    """Clear inputs from a previous game when the link changes."""
+    active = db.token_hash(token)
+    if st.session_state.get("active_game") != active:
+        for key in GAME_SESSION_KEYS:
+            st.session_state.pop(key, None)
+        st.session_state.active_game = active
+
+
+def buy_selected(token, day, name, quantity):
     try:
-        db.buy(DATABASE, day, name, quantity)
+        db.buy(DATABASE, token, day, name, quantity)
         st.session_state.notice = ("success", f"Purchased {quantity} × {PRODUCT_LABELS[name]}.")
     except ValueError as error:
         st.session_state.notice = ("error", str(error))
 
 
-def save_price(day, name):
+def save_price(token, day, name):
     key = f"price_{name}"
     try:
-        db.set_price(DATABASE, day, name, st.session_state[key])
+        db.set_price(DATABASE, token, day, name, st.session_state[key])
         st.session_state.notice = ("success", f"Selling price saved for {PRODUCT_LABELS[name]}.")
     except ValueError as error:
         st.session_state.notice = ("error", str(error))
 
 
-def trade_day(day):
+def trade_day(token, day):
     try:
-        db.trade(DATABASE, day)
+        db.trade(DATABASE, token, day)
         st.session_state.notice = ("success", f"Day {day} complete.")
     except ValueError as error:
         st.session_state.notice = ("error", str(error))
 
 
-def start_new_game():
-    db.reset_game(DATABASE)
-    for key in ("confirm_restart", "product", "quantity"):
-        st.session_state.pop(key, None)
-    st.session_state.notice = ("success", "New game started.")
+def ask_delete():
+    st.session_state.confirm_delete = True
+
+
+def cancel_delete():
+    st.session_state.confirm_delete = False
+
+
+def delete_current_game(token):
+    try:
+        db.delete_game(DATABASE, token)
+        st.session_state.notice = ("success", "Game deleted.")
+    except ValueError as error:
+        st.session_state.notice = ("error", str(error))
+    st.session_state.confirm_delete = False
+    st.query_params.clear()
+
+
+def stop_with_link_error(message):
+    st.error(message)
+    st.button("Start a new game", on_click=leave_game)
+    st.stop()
 
 
 st.set_page_config(page_title="Campus Kiosk")
-db.initialize(DATABASE)
-game, products, history = db.load(DATABASE)
-day = game["day"]
 st.title("Campus Kiosk")
+
+# A malformed link is rejected before the database is opened.
+if "game" in st.query_params:
+    try:
+        db.check_token(st.query_params["game"])
+    except ValueError as error:
+        stop_with_link_error(str(error))
+
+try:
+    db.initialize(DATABASE)
+except ValueError as error:
+    st.error(str(error))
+    st.stop()
+
+if "game" not in st.query_params:
+    show_notice()
+    st.subheader("Start a private game")
+    st.write("Each game has its own private link. Anyone with the link can play or delete the game.")
+    scenario = st.radio("Scenario", list(SCENARIOS), format_func=SCENARIOS.__getitem__, key="scenario")
+    st.button("Start game", type="primary", on_click=start_game, args=(scenario,))
+    st.stop()
+
+token = st.query_params["game"]
+forget_other_game(token)
+try:
+    game, products, history = db.load(DATABASE, token)
+except ValueError as error:
+    stop_with_link_error(str(error))
+
+day = game["day"]
+st.caption(f"Scenario: {SCENARIOS[game['scenario']]}")
+st.info("Bookmark this page to continue later. Games are stored temporarily on the server "
+        "and may be removed, for example after a restart.")
 left, right = st.columns(2)
 left.metric("Cash", euros(game["cash"]))
 right.metric("Trading day", f"{day} of 5" if day <= 5 else "Complete")
@@ -76,12 +152,7 @@ st.table([{"Product": PRODUCT_LABELS[p["name"]], "Stock": p["stock"], "Unit cost
            "Reference price": euros(p["reference"]), "Selling price": euros(p["price"])}
           for p in products])
 
-if "notice" in st.session_state:
-    kind, message = st.session_state.pop("notice")
-    if kind == "success":
-        st.success(message)
-    else:
-        st.error(message)
+show_notice()
 
 if day <= 5:
     st.subheader("Buy stock")
@@ -89,7 +160,7 @@ if day <= 5:
     name = st.selectbox("Product", list(by_name), format_func=PRODUCT_LABELS.__getitem__, key="product")
     quantity = st.number_input("Quantity", min_value=1, step=1, value=1, key="quantity")
     st.write(f"Purchase total: **{euros(quantity * by_name[name]['cost'])}**")
-    st.button("Buy", on_click=buy_selected, args=(day, name, quantity))
+    st.button("Buy", on_click=buy_selected, args=(token, day, name, quantity))
     st.subheader("Selling prices")
     st.caption("Enter a price in euros and press Enter to save it.")
     for product in products:
@@ -98,7 +169,7 @@ if day <= 5:
         whole, fraction = divmod(product["price"], 100)
         st.session_state[key] = f"{whole}.{fraction:02d}"
         st.text_input(f"{PRODUCT_LABELS[name]} (€)", key=key, max_chars=21,
-                      on_change=save_price, args=(day, name))
+                      on_change=save_price, args=(token, day, name))
         daily_demand = demand(product["price"], product["reference"])
         expected_units = sales_for_product(product)[0]
         st.caption(f"Demand: {daily_demand} · In stock: {product['stock']} · Expected sales: {expected_units}")
@@ -106,7 +177,7 @@ if day <= 5:
     st.write("Daily demand is 10 units per product at or below its reference price. "
              "Above that price, demand falls to 5 units, or to 0 if the price exceeds "
              "twice the reference price. Sales are limited to the stock on hand.")
-    st.button("Start trading day", type="primary", on_click=trade_day, args=(day,))
+    st.button("Start trading day", type="primary", on_click=trade_day, args=(token, day))
 
 else:
     stock_value, result = final_result(game["cash"], products)
@@ -140,15 +211,14 @@ if history:
                       for row in report])
 
 st.divider()
-if st.session_state.get("confirm_restart"):
-    st.warning("Replace your current game? Your stock and daily results will be cleared. "
-               "You will start day 1 with €100.00.")
+if st.session_state.get("confirm_delete"):
+    st.warning("Delete this game? Its stock and daily results will be removed "
+               "and this link will stop working.")
     cancel, confirm = st.columns(2)
-    if cancel.button("Cancel"):
-        st.session_state.confirm_restart = False
-        st.rerun()
-    confirm.button("Start new game", on_click=start_new_game)
+    cancel.button("Cancel", on_click=cancel_delete)
+    confirm.button("Delete game", on_click=delete_current_game, args=(token,))
 else:
-    if st.button("New game"):
-        st.session_state.confirm_restart = True
-        st.rerun()
+    delete_col, other_col = st.columns(2)
+    delete_col.button("Delete this game", on_click=ask_delete)
+    other_col.button("Start another game", on_click=leave_game)
+    st.caption("Your current game is kept. Bookmark its link before leaving.")

@@ -1,6 +1,6 @@
 # Campus Week – Team-Erweiterung von Campus Tycoon
 
-**Stand:** Entwurf zur Prüfung, 22.11.2026. Nichts davon ist implementiert, getestet oder deployed. Grundlage sind der Solo-Code auf `main` (Commit `c412e92`), [`specs/first-feature.md`](first-feature.md) und die [offizielle Projektseite](https://2477-introduction-programming.gitlab.io/wiki/team-project/), abgerufen am 22.11.2026.
+**Stand:** 22.11.2026. P0 (technischer Versuch) ist abgeschlossen, siehe unten. P1 (Spieltrennung) ist in Arbeit, P2–P4 sind noch nicht umgesetzt. Grundlage sind der Solo-Code auf `main` (Commit `c412e92`), [`specs/first-feature.md`](first-feature.md) und die [offizielle Projektseite](https://2477-introduction-programming.gitlab.io/wiki/team-project/), abgerufen am 22.11.2026.
 
 Kennzeichnung in diesem Dokument:
 
@@ -199,16 +199,26 @@ Diese Grenzen kommen in README und Repo-Walkthrough:
 - **Ressourcen:** Die Zahl der Spiele ist nicht begrenzt, es gibt kein automatisches Aufräumen.
 - **Wie es sich ändern könnte:** dauerhafte Speicherung durch Austausch von `db.py` (zum Beispiel Postgres); Identität über `st.login`; Rangliste je Szenario auf dieser Grundlage.
 
-## Annahmen, die zuerst praktisch zu prüfen sind (P0)
+## Technischer Versuch P0 (Ergebnis)
 
-Alle **[Annahme]**, noch nicht durchgeführt:
+Durchgeführt am 22.11.2026 auf Streamlit Community Cloud. Grundlage war der Prototyp `spike_app.py` auf dem Branch `p0-token-spike`. Der Branch wird nicht gemergt, und der Prototyp ist nicht Teil der App.
 
-1. Ein Token in `st.query_params` bleibt auf Community Cloud nach Neuladen, im Lesezeichen und in einem neuen Tab erhalten.
-2. Ein privates Fenster ohne Token sieht die Startseite und nicht das Spiel.
-3. Community Cloud baut aus `uv.lock` (laut Doku unterstützt) mit Python 3.12. Das muss im Build-Log und in den Einstellungen bestätigt werden.
-4. Wie sich die Datei nach einem „Reboot app“ verhält, wird nur beobachtet. Das Ergebnis ändert die Grenze oben nicht.
+| # | Annahme | Ergebnis |
+|---|---|---|
+| 1 | Token in `st.query_params` bleibt nach Neuladen und im Lesezeichen erhalten | **Bestätigt** (Cloud, manuell) |
+| 2 | Verschiedene Links haben getrennte Daten | **Bestätigt** (Cloud, manuell: getrennte Zähler) |
+| 3 | Leere und ungültige Links werden abgelehnt | **Bestätigt** (Cloud, manuell) |
+| 4 | Build aus `uv.lock` mit Python 3.12 | **Bestätigt** (Build-Log und Anzeige der Version) |
+| 5 | Verhalten der SQLite-Datei nach „Reboot app“ | **Nicht eindeutig dokumentiert.** Reboot wurde durchgeführt, ob der alte Zähler erhalten blieb, ist offen. Unabhängig davon gilt die Grenze unter „Limits“: keine garantierte Dauerhaftigkeit |
 
-Bereits geprüft, ohne Laufzeittest: Der installierte Streamlit-Code 1.67 bietet `AppTest.query_params` (setzen vor `.run()`, Rückgabe der URL-Parameter nach dem Lauf).
+Vorher lokal mit `AppTest` geprüft (Skript außerhalb des Repos, 13 von 13 Prüfungen bestanden):
+
+- Ohne Parameter erscheint die Startseite.
+- Leere, falsch formatierte und unbekannte Tokens werden ohne Datenänderung abgelehnt.
+- Die Zähler sind getrennt, und ein Link lädt in einer neuen Sitzung wieder seinen Zähler.
+- Kein vollständiges Token steht in Datenbank-Datei, Fehlermeldung oder Seitentext.
+
+Außerdem bestätigt der installierte Streamlit-Code 1.67, dass es `AppTest.query_params` gibt.
 
 ## Done when
 

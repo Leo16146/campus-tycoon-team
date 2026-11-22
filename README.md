@@ -26,7 +26,9 @@ uv run streamlit run app.py --server.address 127.0.0.1 --server.port 8503
 Open http://127.0.0.1:8503 in your browser.
 Stop the server with Ctrl+C.
 
-The app creates its own `kiosk.sqlite3` file in this directory.
+The app creates its own `campus_week.sqlite3` file in this directory.
+Set `CAMPUS_TYCOON_DB` to use another file. A database in the old solo
+format is left unchanged and reported with an error.
 Local databases, virtual environments and secrets are excluded from Git.
 
 ## Team and deployment
