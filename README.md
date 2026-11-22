@@ -11,14 +11,11 @@ baseline strategy.
 
 ## Team and deployment
 
-> **Missing before submission:** the URL of the deployed app and the names and student
-> numbers of all team members. These details have not been added yet.
-
 | | |
 |---|---|
-| Deployed app | Deployed on Streamlit Community Cloud from `main` (`app.py`, Python 3.12). URL: *to be added* |
-| What is online | The app is deployed from `main`; which version is actually running is confirmed in the deployment log on Streamlit Community Cloud. Changes on branches that are not merged are not deployed. The acceptance checklist has not been run on the deployed app yet. |
-| Team members and student numbers | *to be added* |
+| Deployed app | **https://39p9i3vcvzvy66yjhja8xk.streamlit.app** (Streamlit Community Cloud, deployed from `main`, `app.py`, Python 3.12) |
+| Team member and student number | Leo Böhler, 73262 |
+| What is online | The app is deployed from `main`. Changes on branches that are not merged are not deployed. On 23.11.2026 the deployed app showed the behaviour of `main` @ `c825ef1` (see "Verification"). |
 
 The earlier P0 prototype URL showed a throwaway test page (`spike_app.py` on the
 branch `p0-token-spike`). It is not the finished app.
@@ -252,7 +249,7 @@ keeps the rules testable with small numbers.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 174 tests, all passing on 22.11.2026). GitHub
+**Automated** (`uv run pytest`, 175 tests, all passing on 23.11.2026). GitHub
 Actions (`.github/workflows/tests.yml`) runs the same tests on every push and pull
 request:
 
@@ -287,8 +284,17 @@ temporary database, at 1280 px and 375 px width. 30 of 30 checks passed, includi
 the two-tab cases, the leaderboard, the CSV download and no horizontal scrolling on
 the narrow screen. This is not a check of the deployed app.
 
-**Not done yet:** running the acceptance checklist on the deployed app, and a short
-check on a real phone.
+**Acceptance on the deployed app** (https://39p9i3vcvzvy66yjhja8xk.streamlit.app):
+
+- 22.11.2026, `main` @ `047290e`: the acceptance checklist was run automatically in
+  Chromium against the public URL. All workflows passed: invalid input, five days with
+  €319.00 against the baseline's €229.00, CSV download, leaderboard (also a nickname
+  with accents), resume by link, invalid links, separate games, both two-tab cases,
+  delete with cancel and confirm, and no horizontal scrolling at 375 px. Test entries
+  and test games were removed afterwards.
+- 23.11.2026, `main` @ `c825ef1`: a short check confirmed that the last fix is live
+  (no leftover message after deleting a game in two tabs); the test game was deleted.
+- Checked by hand on a real phone: the app runs.
 
 **Dependency audit** (22.11.2026, 02:16 and repeated at 15:00 CET):
 
