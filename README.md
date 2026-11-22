@@ -17,7 +17,7 @@ baseline strategy.
 | | |
 |---|---|
 | Deployed app | Deployed on Streamlit Community Cloud from `main` (`app.py`, Python 3.12). URL: *to be added* |
-| What is online | Always the current `main`. Changes on branches that are not merged yet are not online. The acceptance checklist has not been run on the deployed app yet. |
+| What is online | The app is deployed from `main`; which version is actually running is confirmed in the deployment log on Streamlit Community Cloud. Changes on branches that are not merged are not deployed. The acceptance checklist has not been run on the deployed app yet. |
 | Team members and student numbers | *to be added* |
 
 The earlier P0 prototype URL showed a throwaway test page (`spike_app.py` on the

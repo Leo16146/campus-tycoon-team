@@ -12,14 +12,18 @@ auf einem echten Handy.
 
 **Welcher Stand geprüft wird:** Diese Fassung beschreibt die App mit Tagesplan,
 Rangliste, CSV-Export und der neuen Darstellung (warmes Farbschema, Karten). Die
-deployte App zeigt immer den aktuellen `main`. Solange diese Änderungen nicht auf
-`main` liegen, zeigt sie einen älteren Stand ohne Rangliste, CSV und neue
-Darstellung; dann gelten die Schritte 1, 9b, 9c, 11 und 17 dort noch nicht.
+App wird aus `main` deployed; welcher Stand tatsächlich läuft, bestätigen wir vor der
+Abnahme anhand des Deployment-Logs (Manage app) und des sichtbaren Titels „Campus
+Week“. Läuft noch ein älterer Stand ohne Rangliste, CSV und neue Darstellung, gelten
+die Schritte 1, 9b, 9c, 11 und 17 dort noch nicht.
 
-**Rangliste auf einer öffentlichen App:** Die lokale Prüfung lief mit leerer
-Datenbank. Auf der deployten App können schon Einträge vorhanden sein. Vor Schritt 9c
-deshalb notieren, wie viele Einträge die Rangliste „Exam Week“ auf der Startseite hat
-(N) und wie viele davon mehr als €319.00 haben (H).
+**Rangliste auf einer öffentlichen App:** Die lokale Prüfung lief mit einer
+kontrolliert leeren Datenbank; nur dort gilt der exakte Sollwert „1 of 1“. Auf der
+deployten App können schon Einträge vorhanden sein. Die öffentliche Tabelle zeigt
+höchstens zehn Einträge, sortiert nach Ergebnis und bei Gleichstand nach Reihenfolge
+der Veröffentlichung (ältere zuerst). Daraus lassen sich weder die Gesamtzahl noch der
+eigene Rang ablesen, und der eigene Eintrag muss nicht sichtbar sein, selbst bei
+Rang 1, wenn schon zehn ältere Einträge mit gleichem Ergebnis existieren.
 
 **Voraussetzungen:**
 
@@ -43,9 +47,9 @@ Ergebnis je Zeile eintragen: ✅ wie erwartet, ❌ mit kurzer Beschreibung.
 | 8 | Ab hier die Tabelle unten für alle fünf Tage spielen: je Tag Mengen und Preise eintippen, „Apply …“, „Start trading day“ | Nach „Apply …“ stehen die Buy-Felder wieder auf 0. Cash je Tag wie in der Tabelle. Nach Tag 1 steht oben „Day 1 result: 15 units sold · revenue €70.00 · gross profit €52.50 · baseline gross profit €35.00“ | |
 | 9 | Nach Tag 5 | Final cash €419.00, Overall gain / loss €319.00. Baseline €229.00, Difference +€90.00. Tag 4: €49.00 / €49.00 / €0.00 | |
 | 9b | „Download daily results (CSV)“ | Datei `campus-week-exam-week.csv`, enthält z. B. die Zeile `4,Coffee,14,56.00,28.00,28.00`, kein Token | |
-| 9c | Spitzname „ab“, „Publish my result“; dann „Ana“ | Erst „Use 3–20 letters, digits, spaces, _ or -.“, dann „Your rank: R of N+1 (as Ana)“ mit R = H + 1 (bei leerer Rangliste „1 of 1“). Ana steht in der angezeigten Rangliste, sofern R ≤ 10 ist (es werden nur die besten zehn gezeigt) | |
+| 9c | Spitzname „ab“, „Publish my result“; dann „Ana“ | Erst „Use 3–20 letters, digits, spaces, _ or -.“, dann zeigt das eigene Spiel „Your rank: R of N (as Ana)“ mit Spitzname, Rang und Gesamtzahl der Einträge des Szenarios, und „Remove my result“. Bei kontrolliert leerer Rangliste genau „1 of 1“ und Ana in der Tabelle. Auf der öffentlichen App muss Ana in der Tabelle nicht erscheinen (siehe Hinweis oben) | |
 | 10 | Seite neu laden (F5); Link kopieren, Tab schließen, in neuem Tab öffnen | Jeweils gleiches Endergebnis und gleiche Tabellen | |
-| 11 | Privates Fenster: App-URL ohne Parameter / mit `?game=` / mit `?game=abc` | Startseite mit der Rangliste „Exam Week“, in der Ana steht, sofern R ≤ 10 / „not valid“ / „not valid“, jeweils ohne Absturz | |
+| 11 | Privates Fenster: App-URL ohne Parameter / mit `?game=` / mit `?game=abc` | Startseite mit den Ranglisten (höchstens zehn Einträge je Szenario, absteigend nach Ergebnis, kein Link und kein Token sichtbar); bei kontrolliert leerer Rangliste steht Ana darin / „not valid“ / „not valid“, jeweils ohne Absturz | |
 | 12 | Im privaten Fenster Heatwave starten. Buy Water 10, Water-Preis 1.50, „Apply …“, „Start trading day“ | „Warm morning“: Coffee 10/5, Water 16/8, Granola bar 10/5. Danach 8 Water verkauft, Revenue €12.00, Gross profit €8.00, Cash €107.00, Lager Water 2. Exam-Week-Spiel unverändert | |
 | 13 | Heatwave-Link in einem zweiten Tab öffnen. Dort Buy Coffee 5 eintippen, nicht anwenden. Im ersten Tab „Start trading day“. Dann im zweiten Tab „Apply …“ | Zweiter Tab: Fehlermeldung „game has changed“ **und** „Your plan was discarded because the trading day changed.“ Tag 3, Buy 0, kein Coffee gekauft | |
 | 13b | Wieder zwei Tabs mit dem Heatwave-Link. Zweiter Tab: Buy Water 2 eintippen, nicht anwenden. Erster Tab: Water-Preis 1.20 anwenden. Dann im zweiten Tab „Apply …“ | Zweiter Tab: „This game was changed in another window …“ und „Your plan was discarded because the game was changed in another window.“ Water-Preis bleibt €1.20, kein Water gekauft | |
