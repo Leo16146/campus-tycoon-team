@@ -101,10 +101,10 @@ def test_l3_one_entry_per_game(path):
     assert len(rows(path)) == 1
 
 
-@pytest.mark.parametrize("nickname", ["", "ab", "x" * 21, "Leo!", "<b>Leo</b>"])
+@pytest.mark.parametrize("nickname", ["", "ab", "x" * 21, "Leo!", "<b>Leo</b>", "Leo 🙂", "a=1+2"])
 def test_l4_invalid_nicknames_are_rejected(path, nickname):
     token = play(path, "exam_week", EMPTY_PLAN)
-    with pytest.raises(ValueError, match="Use 3–20 letters"):
+    with pytest.raises(ValueError, match="Use 3–20 letters \\(accents allowed\\)"):
         db.publish_result(path, token, nickname)
     assert rows(path) == []
 
@@ -115,6 +115,13 @@ def test_l5_nicknames_are_trimmed(path):
     db.publish_result(path, first, "  Leo  ")
     db.publish_result(path, second, "Team 4_a-b")
     assert [r[2] for r in rows(path)] == ["Leo", "Team 4_a-b"]
+
+
+@pytest.mark.parametrize("nickname", ["José", "João", "Müller", "Zoë Ana"])
+def test_l5b_accented_nicknames_are_accepted(path, nickname):
+    token = play(path, "exam_week", EMPTY_PLAN)
+    db.publish_result(path, token, nickname)
+    assert [r[2] for r in rows(path)] == [nickname]
 
 
 def test_l6_separate_boards_and_shared_ranks(path, l6):
@@ -242,7 +249,7 @@ def test_publish_and_remove_through_the_app(path):
     page = open_app(token)
     page.text_input(key="nickname").set_value("ab").run()
     click(page, "Publish my result")
-    assert page.error[0].value == "Use 3–20 letters, digits, spaces, _ or -."
+    assert page.error[0].value == "Use 3–20 letters (accents allowed), digits, spaces, _ or -."
     assert rows(path) == []
     page.text_input(key="nickname").set_value("Ana").run()
     click(page, "Publish my result")

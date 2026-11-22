@@ -60,6 +60,11 @@ def test_start_page_without_game_link(path):
     page = open_app()
     assert not page.exception
     assert page.radio[0].options == ["Exam Week", "Heatwave"]
+    # Each scenario is explained in one sentence before the player chooses it.
+    assert list(page.radio[0].proto.captions) == [
+        "Coffee is in high demand while students revise; on Open Day nobody pays more than "
+        "the reference price.",
+        "Water sells best and coffee is weak; on Sports day the better price differs by product."]
     assert labels(page) == ["Start game"]
     assert not page.metric and not page.table
     assert len(db.load(path, other)[1]) == 3

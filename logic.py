@@ -42,7 +42,7 @@ EVENTS = {
 def price_in_cents(text):
     text = text.strip()
     if not re.fullmatch(r"[0-9]+(?:[.][0-9]{1,2})?", text):
-        raise ValueError("Enter a positive euro amount with at most two decimal places.")
+        raise ValueError("Use a decimal point and at most two decimals, e.g. 4.50 (no comma, no € symbol).")
     whole, _, fraction = text.partition(".")
     cents = int(whole) * 100 + int(fraction.ljust(2, "0"))
     if cents < 1:
@@ -52,14 +52,15 @@ def price_in_cents(text):
     return cents
 
 
-NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9 _-]{3,20}")
-
-
 def checked_nickname(text):
-    """A public leaderboard name: 3–20 letters, digits, spaces, _ or -."""
+    """A public leaderboard name: 3–20 letters (accents allowed), digits, spaces, _ or -.
+
+    str.isalnum() accepts letters such as é, ã or ü, but no markup or symbols.
+    """
     nickname = text.strip()
-    if not NICKNAME_PATTERN.fullmatch(nickname):
-        raise ValueError("Use 3–20 letters, digits, spaces, _ or -.")
+    allowed = all(char.isalnum() or char in " _-" for char in nickname)
+    if not (3 <= len(nickname) <= 20 and allowed):
+        raise ValueError("Use 3–20 letters (accents allowed), digits, spaces, _ or -.")
     return nickname
 
 

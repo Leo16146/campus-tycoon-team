@@ -6,11 +6,12 @@ toolbarMode = "viewer"
 
 [theme]
 base = "light"
-# Warm coffee colours; every text/background pair has a contrast of at least 6:1.
+# Warm coffee colours. Measured contrast on the page background: body text 17.9:1,
+# captions (Streamlit shows them at 60 % opacity) 4.8:1, primary button 6.2:1.
 primaryColor = "#9A4A12"
 backgroundColor = "#FFFBF5"
 secondaryBackgroundColor = "#F6EEE4"
-textColor = "#2B2118"
+textColor = "#1A120C"
 borderColor = "#E6D9C9"
 showWidgetBorder = true
 baseRadius = "0.6rem"
