@@ -159,10 +159,10 @@ if day <= 5:
     st.subheader(f"Today's event: {event_name}")
     st.table([{"Product": PRODUCT_LABELS[p["name"]],
                "Demand at or below reference price": tiers[p["name"]][0],
-               "Demand up to twice the reference price": tiers[p["name"]][1],
-               "Demand above twice the reference price": 0}
+               "Demand above reference price, up to and including twice it": tiers[p["name"]][1]}
               for p in products])
-    st.info("At twice the reference price, each unit earns three times as much gross profit "
+    st.info("Above twice the reference price, demand is 0. "
+            "At twice the reference price, each unit earns three times as much gross profit "
             "as at the reference price. Sales are limited to the stock on hand.")
     st.subheader("Buy stock")
     by_name = {p["name"]: p for p in products}
