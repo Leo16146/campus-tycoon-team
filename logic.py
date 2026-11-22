@@ -8,6 +8,9 @@ STARTING_CASH = 10000
 # Product name (SQLite key), unit cost and reference price in cents, in purchase order.
 CATALOG = [("Kaffee", 200, 400), ("Wasser", 50, 100), ("Müsliriegel", 100, 200)]
 
+# English names shown in the app. Saved games keep the original names as keys.
+PRODUCT_LABELS = {"Kaffee": "Coffee", "Wasser": "Water", "Müsliriegel": "Granola bar"}
+
 TRADING_DAYS = 5
 
 # Scenario keys are stored with each game. Never redefine an existing key.

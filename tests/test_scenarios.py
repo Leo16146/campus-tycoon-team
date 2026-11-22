@@ -188,7 +188,7 @@ def test_open_day_is_shown_and_expected_sales_follow_it(path):
         "Product", "Demand at or below reference price",
         "Demand above reference price, up to and including twice it"]
     assert event["Demand above reference price, up to and including twice it"].tolist() == [0, 0, 0]
-    assert page.info[1].value.startswith("Above twice the reference price, demand is 0.")
+    assert any(i.value.startswith("Above twice the reference price, demand is 0.") for i in page.info)
     assert coffee_caption(page) == "Demand: 0 · In stock: 14 · Expected sales: 0 · Cost: €0.00"
 
 

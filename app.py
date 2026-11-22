@@ -4,15 +4,12 @@ from pathlib import Path
 import streamlit as st
 
 import db
-from logic import (CATALOG, SCENARIOS, baseline_results, demand, final_result, price_in_cents,
-                   sales_for_product, todays_event)
+from logic import (CATALOG, PRODUCT_LABELS, SCENARIOS, baseline_results, demand, final_result,
+                   price_in_cents, sales_for_product, todays_event)
 
 
 DATABASE = Path(os.environ.get("CAMPUS_TYCOON_DB", Path(__file__).with_name("campus_week.sqlite3")))
 
-
-# Saved games use the original product names as SQLite keys.
-PRODUCT_LABELS = {"Kaffee": "Coffee", "Wasser": "Water", "Müsliriegel": "Granola bar"}
 
 BUSY_LOADING = "The game is busy right now and could not be loaded. Please try again in a moment."
 
@@ -47,6 +44,18 @@ def signed_euros(cents):
 
 def daily_gross_profit(history, day):
     return sum(row["profit"] for row in history if row["day"] == day)
+
+
+def last_day_summary(history, day, scenario):
+    """One line about the most recent trading day, built from the stored sales."""
+    last = day - 1
+    lines = [row for row in history if row["day"] == last]
+    baseline_profit = baseline_results(scenario)[0][last - 1][0]
+    sold = sum(row["sold"] for row in lines)
+    revenue = sum(row["revenue"] for row in lines)
+    profit = sum(row["profit"] for row in lines)
+    return (f"Day {last} result: {sold} units sold · revenue {euros(revenue)} · "
+            f"gross profit {euros(profit)} · baseline gross profit {euros(baseline_profit)}")
 
 
 def sales_summary_row(label, sales):
@@ -283,6 +292,8 @@ st.table([{"Product": PRODUCT_LABELS[p["name"]], "Stock": p["stock"], "Unit cost
           for p in products])
 
 show_notices()
+if history:
+    st.info(last_day_summary(history, day, game["scenario"]))
 
 if day <= 5:
     event_name, tiers = todays_event(game["scenario"], day)

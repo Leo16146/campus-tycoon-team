@@ -43,6 +43,9 @@ branch `p0-token-spike`). It is not the finished app.
   changes.
   Unsold stock stays in the inventory and all amounts are whole cents.
 - **How to play** on the start page explains the goal, the daily steps and the score.
+- **Day result right after trading:** units sold, revenue and gross profit of the
+  last day next to the baseline's gross profit for that day. Error messages of the
+  plan name the product, for example *"Coffee: The selling price must be positive."*
 - **Final comparison** after day 5: your overall gain / loss next to the baseline
   strategy, the signed difference and the gross profit for each day.
 - **Delete with confirmation**, *Start another game*, and clear messages for
@@ -95,6 +98,8 @@ Git. The app needs no secrets or API keys.
 | `tests/` | pytest tests (see below) |
 | `specs/campus-week.md` | Specification of the team extension with all expected values |
 | `docs/acceptance-checklist.md` | Manual check on the deployed app |
+| `docs/demo-script.md` | Plan for the live demo and questions for the walkthrough |
+| `.github/workflows/tests.yml` | Runs `uv sync --locked` and `uv run pytest` on GitHub for every push and pull request |
 | `specs/first-feature.md`, `docs/product-brief.html` | Documents of the original solo project |
 
 ## Access and storage
@@ -104,8 +109,9 @@ Git. The app needs no secrets or API keys.
   token, looks up the game by its hash inside the transaction and works only on
   that game's rows. A game id from the browser never grants access.
 - **Malformed links** are rejected before the database is opened.
-- **Storage** is SQLite on the server. Each action (buy, set price, trade,
-  delete) is one transaction: it is saved completely or not at all.
+- **Storage** is SQLite on the server. Each action (start game, apply plan, buy,
+  set price, trade, delete) is one transaction: it is saved completely or not at
+  all.
 - **Temporary storage.** Streamlit Community Cloud does not guarantee that local
   files persist, so games can disappear, for example after a restart. The app says
   so on every game screen. A lost game shows the same message as an invalid link.
@@ -231,8 +237,9 @@ keeps the rules testable with small numbers.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 132 tests). All pass on `main` @ `5471fe0`, run in a
-fresh copy on 22.11.2026:
+**Automated** (`uv run pytest`, 141 tests on the branch `p8-polish`; 132 tests pass
+on `main` @ `5471fe0`, run in a fresh copy on 22.11.2026). GitHub Actions runs the
+same tests on every push; the first run on GitHub has not happened yet:
 
 | File | What it covers |
 |---|---|
@@ -242,6 +249,7 @@ fresh copy on 22.11.2026:
 | `tests/test_baseline.py` | Baseline (€229.00 / €184.00), full five-day games (€319.00 / €270.00), results above and below the baseline, budget rule |
 | `tests/test_locks.py` | Busy database: message instead of crash, no partial changes, success once after release, no automatic retry, busy delete keeps the link, separate message for page loads, other errors not hidden |
 | `tests/test_daily_plan.py` | Daily plan: preview, atomic apply, rejected inputs kept for correction, total above cash, catalogue check, rollback, other games unchanged, day finished or game changed in another window, numeric price comparison, discard, full game through the UI |
+| `tests/test_polish.py` | Day result summary (also below the baseline and only for its own game), product names in plan errors |
 | `tests/test_app.py` | Start page, invalid links, new session via link, two windows, switching links, delete with confirmation, final results |
 
 The expected values are computed by hand in `specs/campus-week.md`, not by the
