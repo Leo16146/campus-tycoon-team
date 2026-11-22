@@ -5,6 +5,10 @@ import re
 
 STARTING_CASH = 10000
 
+# Scenario keys are stored with each game. Never redefine an existing key.
+# Daily events per scenario follow in P2 (specs/campus-week.md).
+SCENARIOS = {"exam_week": "Exam Week", "heatwave": "Heatwave"}
+
 
 def price_in_cents(text):
     text = text.strip()
