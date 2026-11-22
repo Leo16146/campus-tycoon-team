@@ -5,8 +5,8 @@ import secrets
 import sqlite3
 from contextlib import closing, contextmanager
 
-from logic import (CATALOG, PRODUCT_LABELS, SCENARIOS, STARTING_CASH, price_in_cents,
-                   purchase_cost, sales_for_product, todays_event)
+from logic import (CATALOG, PRODUCT_LABELS, SCENARIOS, STARTING_CASH, checked_nickname,
+                   final_result, price_in_cents, purchase_cost, sales_for_product, todays_event)
 
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_-]{43}")
@@ -75,7 +75,7 @@ def initialize(path):
         tables = table_names(conn)
     if "game" in tables and "games" not in tables:
         raise ValueError(SOLO_SCHEMA)
-    if {"games", "products", "sales"} <= tables:
+    if {"games", "products", "sales", "leaderboard"} <= tables:
         return
     with transaction(path) as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS games (
@@ -91,6 +91,9 @@ def initialize(path):
             sold INTEGER NOT NULL, revenue INTEGER NOT NULL,
             expense INTEGER NOT NULL, profit INTEGER NOT NULL,
             PRIMARY KEY (game_id, day, name))""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS leaderboard (
+            entry_id INTEGER PRIMARY KEY, game_id INTEGER NOT NULL UNIQUE,
+            nickname TEXT NOT NULL, score INTEGER NOT NULL)""")
 
 
 def create_game(path, scenario):
@@ -260,6 +263,69 @@ def delete_game(path, token):
     check_token(token)
     with transaction(path) as conn:
         game = authorized_game(conn, token)
+        conn.execute("DELETE FROM leaderboard WHERE game_id = ?", (game["id"],))
         conn.execute("DELETE FROM sales WHERE game_id = ?", (game["id"],))
         conn.execute("DELETE FROM products WHERE game_id = ?", (game["id"],))
         conn.execute("DELETE FROM games WHERE id = ?", (game["id"],))
+
+
+def publish_result(path, token, nickname):
+    """Put a finished game on its scenario's leaderboard. The score is computed here
+    from the saved cash and stock; only the nickname comes from the browser."""
+    check_token(token)
+    nickname = checked_nickname(nickname)
+    with transaction(path) as conn:
+        game = playable_game(conn, token)
+        if game["day"] <= 5:
+            raise ValueError("Finish all five trading days before publishing.")
+        if conn.execute("SELECT 1 FROM leaderboard WHERE game_id = ?", (game["id"],)).fetchone():
+            raise ValueError("This game is already on the leaderboard.")
+        products = conn.execute("SELECT stock, cost FROM products WHERE game_id = ?",
+                                (game["id"],)).fetchall()
+        score = final_result(game["cash"], products)[1]
+        conn.execute("INSERT INTO leaderboard (game_id, nickname, score) VALUES (?, ?, ?)",
+                     (game["id"], nickname, score))
+
+
+def withdraw_result(path, token):
+    """Remove this game's leaderboard entry."""
+    check_token(token)
+    with transaction(path) as conn:
+        game = authorized_game(conn, token)
+        removed = conn.execute("DELETE FROM leaderboard WHERE game_id = ?", (game["id"],))
+        if removed.rowcount != 1:
+            raise ValueError("This game is not on the leaderboard.")
+
+
+def leaderboard(path, scenario, limit=10):
+    """The best entries of one scenario: rank, nickname and score only.
+
+    Equal scores share a rank (1, 1, 3); among them, earlier entries come first.
+    """
+    with transaction(path, write=False) as conn:
+        rows = conn.execute("""SELECT l.nickname, l.score FROM leaderboard l
+                               JOIN games g ON g.id = l.game_id WHERE g.scenario = ?
+                               ORDER BY l.score DESC, l.entry_id LIMIT ?""",
+                            (scenario, limit)).fetchall()
+    entries = []
+    for row in rows:
+        # All higher scores come earlier in this list, so they are counted here.
+        rank = 1 + sum(1 for entry in entries if entry["score"] > row["score"])
+        entries.append({"rank": rank, "nickname": row["nickname"], "score": row["score"]})
+    return entries
+
+
+def my_entry(path, token):
+    """This game's nickname, rank and number of entries in its scenario, or None."""
+    check_token(token)
+    with transaction(path, write=False) as conn:
+        game = authorized_game(conn, token)
+        entry = conn.execute("SELECT nickname, score FROM leaderboard WHERE game_id = ?",
+                             (game["id"],)).fetchone()
+        if entry is None:
+            return None
+        higher, total = conn.execute(
+            """SELECT SUM(l.score > ?), COUNT(*) FROM leaderboard l
+               JOIN games g ON g.id = l.game_id WHERE g.scenario = ?""",
+            (entry["score"], game["scenario"])).fetchone()
+        return {"nickname": entry["nickname"], "rank": 1 + higher, "total": total}

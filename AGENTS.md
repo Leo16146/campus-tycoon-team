@@ -17,6 +17,10 @@ lassen. Alle sichtbaren Texte der App sind auf Englisch. Eurobeträge erscheinen
 - `db.py` speichert Spiele mit Pythons eingebautem Modul `sqlite3`.
 - `tests/` enthält die pytest-Tests. Speichertests verwenden temporäre SQLite-Dateien.
 - `docs/acceptance-checklist.md` ist die manuelle Prüfliste für die deployte App.
+- `docs/demo-script.md` enthält Demo-Ablauf und Fragen für die Repo-Begehung.
+- Rangliste: Das Ergebnis berechnet `db.publish_result` aus dem gespeicherten Spiel;
+  aus dem Browser kommt nur der Spitzname. Öffentlich sichtbar sind nur Platz,
+  Spitzname und Ergebnis, nie Token oder Spiel-ID.
 
 ## Befehle im Projektordner
 

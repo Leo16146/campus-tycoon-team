@@ -8,6 +8,9 @@ found and explained in your own words.
 ## Before the presentation
 
 - Open the deployed URL a few minutes early so the app is awake.
+- After every merge to `main`, open the app once. If it shows an error right after an
+  update, use *Manage app → Reboot app* on Streamlit Community Cloud. On 22.11.2026
+  an `ImportError` after an update disappeared after a reboot.
 - Use one browser window with only the tabs you need. Close dashboards and the agent.
 - Start new games during the demo. Do not rely on games saved earlier: storage on
   Streamlit Community Cloud is temporary.
@@ -39,6 +42,9 @@ found and explained in your own words.
    `docs/acceptance-checklist.md`. The result is €319.00 against a baseline of
    €229.00, a difference of +€90.00.
    - The trap is Open Day: with premium prices, nothing sells that day.
+7. **Leaderboard and export.** Publish the result under a nickname, show the rank and
+   the leaderboard on the start page, and download the CSV. Classmates can start
+   their own game from the URL and appear on the same leaderboard.
 
 **If something fails:** say what happened and continue.
 
@@ -46,6 +52,7 @@ found and explained in your own words.
 - **A game is lost:** the app shows that the link is no longer available. Explain
   why storage is temporary and start a new game.
 - **The database is busy:** the app asks you to try again. Nothing was changed.
+- **An error right after an update:** reboot the app (see "Before the presentation").
 
 ## Questions to be ready for
 
@@ -68,7 +75,8 @@ limits are.
 | Interface | Why does the daily plan not use `st.form`? When are the input fields reset? | `app.fill_draft`, `app.clear_draft`, `app.draft_changed` |
 | Errors | What does the player see for invalid input, an invalid link or a busy database? | `app.notify`, `db.checked_plan`, `app.stop_when_busy` |
 | Tests | What do the tests cover, and what do they not cover? How do they avoid touching real data? | README "Verification", `tests/` |
-| Change | How would you add persistent storage, accounts or a leaderboard? What would change? | README "How it could change" |
+| Leaderboard | Why can a player not fake a score? Why is one entry per person not guaranteed? How are equal scores ranked? | `db.publish_result`, `db.leaderboard`, README "Known limits" |
+| Change | How would you add persistent storage or accounts? What would change? | README "How it could change" |
 
 ## A good way to practise
 

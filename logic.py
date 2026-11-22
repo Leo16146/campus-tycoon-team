@@ -1,6 +1,8 @@
-"""Campus Kiosk trading rules. All amounts are in cents."""
+"""Campus Week trading rules (the campus kiosk game). All amounts are in cents."""
 
 
+import csv
+import io
 import re
 
 STARTING_CASH = 10000
@@ -48,6 +50,17 @@ def price_in_cents(text):
     if cents > 2**63 - 1:
         raise ValueError("This price is too large to save.")
     return cents
+
+
+NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9 _-]{3,20}")
+
+
+def checked_nickname(text):
+    """A public leaderboard name: 3–20 letters, digits, spaces, _ or -."""
+    nickname = text.strip()
+    if not NICKNAME_PATTERN.fullmatch(nickname):
+        raise ValueError("Use 3–20 letters, digits, spaces, _ or -.")
+    return nickname
 
 
 def final_result(cash, products):
@@ -125,3 +138,23 @@ def baseline_results(scenario):
         days.append((gross_profit, cash))
     remaining = [{"stock": stock[name], "cost": cost} for name, cost, _ in CATALOG]
     return days, final_result(cash, remaining)[1]
+
+
+def cents_text(cents):
+    """Plain amount for spreadsheets, for example 4000 -> "40.00"."""
+    sign = "-" if cents < 0 else ""
+    whole, fraction = divmod(abs(cents), 100)
+    return f"{sign}{whole}.{fraction:02d}"
+
+
+def history_csv(history):
+    """The daily results of one game as CSV text with amounts in euros."""
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["Day", "Product", "Units sold", "Revenue (EUR)",
+                     "Cost of goods sold (EUR)", "Gross profit (EUR)"])
+    for row in history:
+        writer.writerow([row["day"], PRODUCT_LABELS[row["name"]], row["sold"],
+                         cents_text(row["revenue"]), cents_text(row["expense"]),
+                         cents_text(row["profit"])])
+    return out.getvalue()

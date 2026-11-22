@@ -233,7 +233,7 @@ def test_u14_premium_except_open_day_through_the_ui(path):
         cash_after.append(db.load(path, token)[0]["cash"])
     assert cash_after == [15250, 23500, 31750, 36650, 41900]
     values = {m.label: m.value for m in page.metric}
-    assert values["Your overall gain / loss"] == "€319.00"
+    assert values["Overall gain / loss"] == "€319.00"
     assert values["Difference (you − baseline)"] == "+€90.00"
 
 

@@ -137,7 +137,7 @@ def test_final_comparison_above_the_baseline(path):
     page = open_app(token)
     assert not page.exception
     values = metrics(page)
-    assert values["Your overall gain / loss"] == "€319.00"
+    assert values["Overall gain / loss"] == "€319.00"
     assert values["Baseline overall gain / loss"] == "€229.00"
     assert values["Difference (you − baseline)"] == "+€90.00"
     assert comparison_rows(page) == [
@@ -157,7 +157,7 @@ def test_final_comparison_below_the_baseline(path):
     page = open_app(token)
     assert not page.exception
     values = metrics(page)
-    assert values["Your overall gain / loss"] == "€0.00"
+    assert values["Overall gain / loss"] == "€0.00"
     assert values["Baseline overall gain / loss"] == "€229.00"
     assert values["Difference (you − baseline)"] == "-€229.00"
     assert comparison_rows(page)[3] == [4, "€0.00", "€49.00", "-€49.00"]
@@ -168,10 +168,10 @@ def test_report_shows_only_its_own_game(path):
     a, _ = play(path, "exam_week", PREMIUM_EXCEPT_OPEN_DAY)
     b, _ = play(path, "heatwave", [(REFERENCE, (0, 0, 0))] * 5)
     page_a, page_b = open_app(a), open_app(b)
-    assert metrics(page_a)["Your overall gain / loss"] == "€319.00"
+    assert metrics(page_a)["Overall gain / loss"] == "€319.00"
     assert metrics(page_a)["Baseline overall gain / loss"] == "€229.00"
     assert page_a.table[1].value.values.tolist()[-1] == ["Total", 112, "€458.00", "€319.00"]
-    assert metrics(page_b)["Your overall gain / loss"] == "€0.00"
+    assert metrics(page_b)["Overall gain / loss"] == "€0.00"
     assert metrics(page_b)["Baseline overall gain / loss"] == "€184.00"
     assert page_b.table[1].value.values.tolist()[-1] == ["Total", 0, "€0.00", "€0.00"]
     assert [row[1] for row in comparison_rows(page_b)] == ["€0.00"] * 5

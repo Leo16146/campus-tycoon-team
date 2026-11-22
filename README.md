@@ -11,12 +11,13 @@ baseline strategy.
 
 ## Team and deployment
 
-> **Missing before submission:** the deployed URL and the names and student numbers
-> of all team members. These details have not been added yet.
+> **Missing before submission:** the URL of the deployed app and the names and student
+> numbers of all team members. These details have not been added yet.
 
 | | |
 |---|---|
-| Deployed app (from `main`, `app.py`, Python 3.12) | *not deployed yet* |
+| Deployed app | Deployed on Streamlit Community Cloud from `main` (`app.py`, Python 3.12). URL: *to be added* |
+| What is online | The app is deployed from `main`; which version is actually running is confirmed in the deployment log on Streamlit Community Cloud. Changes on branches that are not merged are not deployed. The acceptance checklist has not been run on the deployed app yet. |
 | Team members and student numbers | *to be added* |
 
 The earlier P0 prototype URL showed a throwaway test page (`spike_app.py` on the
@@ -48,6 +49,16 @@ branch `p0-token-spike`). It is not the finished app.
   plan name the product, for example *"Coffee: The selling price must be positive."*
 - **Final comparison** after day 5: your overall gain / loss next to the baseline
   strategy, the signed difference and the gross profit for each day.
+- **Scenario leaderboards (optional):** after day 5 you can publish your result
+  under a nickname. The start page shows the best 10 per scenario. The score is
+  computed on the server from the saved game; only the nickname comes from the
+  browser. Equal scores share a rank. You can remove your entry; deleting the
+  game removes it too.
+- **Clear layout:** each step is a card (inventory, today's event, plan, trading,
+  results), the next step is always the highlighted button, and every number on the
+  final screen appears once, with the calculation shown below it.
+- **CSV download** of your daily results (the file name contains only the scenario,
+  never the private link).
 - **Delete with confirmation**, *Start another game*, and clear messages for
   invalid input, invalid links and a briefly busy database.
 
@@ -99,6 +110,7 @@ Git. The app needs no secrets or API keys.
 | `specs/campus-week.md` | Specification of the team extension with all expected values |
 | `docs/acceptance-checklist.md` | Manual check on the deployed app |
 | `docs/demo-script.md` | Plan for the live demo and questions for the walkthrough |
+| `.streamlit/config.toml` | Look of the app: warm coffee colours (every text/background pair has a contrast of at least 6:1), rounded cards, and only the viewer menu for visitors |
 | `.github/workflows/tests.yml` | Runs `uv sync --locked` and `uv run pytest` on GitHub for every push and pull request |
 | `specs/first-feature.md`, `docs/product-brief.html` | Documents of the original solo project |
 
@@ -214,7 +226,8 @@ keeps the rules testable with small numbers.
   that a game can be resumed.
 - Whoever has the link has full access to that game. The link does not identify
   a person.
-- There is no shared competition or leaderboard between games.
+- The leaderboard has no accounts: one person can enter several times with several
+  games, nicknames are not moderated, and it is stored as temporarily as the games.
 - The game is deterministic and everything is known in advance. A player who
   understands "3 × min(upper, stock) > min(lower, stock)" can solve it. This is
   intended for a learning game.
@@ -230,16 +243,16 @@ keeps the rules testable with small numbers.
   also have to change.
 - **Accounts:** use `st.login` to identify players, still with one game per
   authorised owner.
-- **Leaderboard:** compare results per scenario, which is fair because all players
-  of a scenario get the same events.
+- **Accounts for the leaderboard:** with `st.login`, the leaderboard could allow one
+  entry per person instead of one per game.
 - **More scenarios:** add new keys to `EVENTS` in `logic.py`. Never change an
   existing key.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 141 tests on the branch `p8-polish`; 132 tests pass
-on `main` @ `5471fe0`, run in a fresh copy on 22.11.2026). GitHub Actions runs the
-same tests on every push; the first run on GitHub has not happened yet:
+**Automated** (`uv run pytest`, 166 tests, all passing on 22.11.2026). GitHub
+Actions (`.github/workflows/tests.yml`) runs the same tests on every push and pull
+request:
 
 | File | What it covers |
 |---|---|
@@ -250,6 +263,8 @@ same tests on every push; the first run on GitHub has not happened yet:
 | `tests/test_locks.py` | Busy database: message instead of crash, no partial changes, success once after release, no automatic retry, busy delete keeps the link, separate message for page loads, other errors not hidden |
 | `tests/test_daily_plan.py` | Daily plan: preview, atomic apply, rejected inputs kept for correction, total above cash, catalogue check, rollback, other games unchanged, day finished or game changed in another window, numeric price comparison, discard, full game through the UI |
 | `tests/test_polish.py` | Day result summary (also below the baseline and only for its own game), product names in plan errors |
+| `tests/test_leaderboard.py` | Leaderboard: only finished games, score from the saved game, one entry per game, nickname rules, shared ranks, withdraw, delete, schema upgrade, locks, no tokens on the page |
+| `tests/test_csv.py` | CSV content in euros, file name without token, only the own game |
 | `tests/test_app.py` | Start page, invalid links, new session via link, two windows, switching links, delete with confirmation, final results |
 
 The expected values are computed by hand in `specs/campus-week.md`, not by the
@@ -264,10 +279,16 @@ with `docs/acceptance-checklist.md`.
 separate links keep separate data and invalid links are rejected. Whether data
 survived a reboot was not clearly recorded.
 
-**Not done yet:** deploying the finished app and running the acceptance checklist
-on it.
+**Local browser check** (22.11.2026, automated): the acceptance checklist was run
+automatically in Chromium (Playwright) against the app on `localhost` with an empty
+temporary database, at 1280 px and 375 px width. 30 of 30 checks passed, including
+the two-tab cases, the leaderboard, the CSV download and no horizontal scrolling on
+the narrow screen. This is not a check of the deployed app.
 
-**Dependency audit** (22.11.2026):
+**Not done yet:** running the acceptance checklist on the deployed app, and a short
+check on a real phone.
+
+**Dependency audit** (22.11.2026, 02:16 and repeated at 15:00 CET):
 
 1. Exported `uv.lock` with `uv export --frozen --all-groups --no-emit-project
    --format requirements-txt` to a temporary file outside the repository.
