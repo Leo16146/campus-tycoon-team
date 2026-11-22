@@ -189,7 +189,7 @@ def test_open_day_is_shown_and_expected_sales_follow_it(path):
         "Demand above reference price, up to and including twice it"]
     assert event["Demand above reference price, up to and including twice it"].tolist() == [0, 0, 0]
     assert page.info[1].value.startswith("Above twice the reference price, demand is 0.")
-    assert coffee_caption(page) == "Demand: 0 · In stock: 14 · Expected sales: 0"
+    assert coffee_caption(page) == "Demand: 0 · In stock: 14 · Expected sales: 0 · Cost: €0.00"
 
 
 def test_expected_sales_match_the_settlement(path):
@@ -199,7 +199,7 @@ def test_expected_sales_match_the_settlement(path):
     db.buy(path, token, 2, "Kaffee", 12)
     page = open_app(token)
     assert event_heading(page) == "Today's event: Revision rush"
-    assert coffee_caption(page) == "Demand: 20 · In stock: 12 · Expected sales: 12"
+    assert coffee_caption(page) == "Demand: 20 · In stock: 12 · Expected sales: 12 · Cost: €0.00"
     next(b for b in page.button if b.label == "Start trading day").click().run()
     assert not page.exception
     assert day_lines(state(path, token)[3], 2)[0][1] == 12

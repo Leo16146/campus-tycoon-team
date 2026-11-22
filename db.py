@@ -170,6 +170,37 @@ def set_price(path, token, day, name, text):
             raise ValueError("This product is not in the kiosk catalogue.")
 
 
+def checked_plan(quantities, prices):
+    """Validate a daily plan: whole quantities of 0 or more and valid prices for
+    exactly the catalogue products. Returns the prices in cents."""
+    names = {name for name, _, _ in CATALOG}
+    if set(quantities) != names or set(prices) != names:
+        raise ValueError("The plan does not match the kiosk catalogue.")
+    for quantity in quantities.values():
+        if type(quantity) is not int or quantity < 0:
+            raise ValueError("Enter a whole number of 0 or more for each purchase.")
+    return {name: price_in_cents(text) for name, text in prices.items()}
+
+
+def apply_plan(path, token, day, quantities, prices):
+    """Buy all planned stock and save all prices together, or change nothing."""
+    check_token(token)
+    with transaction(path) as conn:
+        game = current_game(conn, token, day)
+        cents = checked_plan(quantities, prices)
+        products = conn.execute("SELECT name, cost FROM products WHERE game_id = ? ORDER BY position",
+                                (game["id"],)).fetchall()
+        total = sum(quantities[p["name"]] * p["cost"] for p in products)
+        if total > game["cash"]:
+            raise ValueError("Not enough cash for this purchase.")
+        conn.execute("UPDATE games SET cash = cash - ? WHERE id = ?", (total, game["id"]))
+        for product in products:
+            name = product["name"]
+            conn.execute("""UPDATE products SET stock = stock + ?, price = ?
+                            WHERE game_id = ? AND name = ?""",
+                         (quantities[name], cents[name], game["id"], name))
+
+
 def trade(path, token, day):
     check_token(token)
     with transaction(path) as conn:

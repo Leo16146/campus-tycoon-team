@@ -1,42 +1,47 @@
 # Abnahme auf der deployten App
 
-**Status: offen.** Deployment und Cloud-Abnahme der fertigen App sind noch nicht
-durchgeführt. Die P0-URL zeigt nur den Prototyp und zählt nicht.
+**Status: offen.** Deployment und Cloud-Abnahme sind noch nicht durchgeführt. Die
+P0-URL zeigt nur den Prototyp und zählt nicht.
+
+Diese Fassung beschreibt den Ablauf mit Tagesplan (E1, Branch `p6-daily-plan`). Sie
+gilt erst, wenn E1 auf `main` liegt und deployed ist. Für die App ohne Tagesplan
+gilt die Fassung auf `main` @ `acd00b2`.
 
 **Voraussetzungen:**
 
 - Die App läuft auf Streamlit Community Cloud aus `main` mit der Datei `app.py` und
   Python 3.12. Das bestätigen das Build-Log und die Einstellungen.
-- Die Prüfung findet in einem normalen Browserfenster statt. Für die Schritte 8–9
-  braucht es zusätzlich ein privates Fenster.
+- Ein normales Browserfenster. Für die Schritte 11–12 zusätzlich ein privates
+  Fenster, für Schritt 13 ein zweiter Tab.
 - Bitte keine vollständigen Spiel-Links in Chats oder Screenshots weitergeben.
 
 Ergebnis je Zeile eintragen: ✅ wie erwartet, ❌ mit kurzer Beschreibung.
 
 | # | Schritt | Sollwert | Ergebnis |
 |---|---|---|---|
-| 1 | App-URL ohne Parameter öffnen | Startseite „Start a private game“ mit den Szenarien Exam Week und Heatwave | |
-| 2 | Exam Week wählen, „Start game“ | `?game=…` in der Adresszeile. Cash €100.00, „1 of 5“, Lager 0/0/0, Preise €4.00/€1.00/€2.00. „Today's event: Normal day“ mit 10 / 5 für jedes Produkt | |
-| 3 | Coffee, Menge 51, „Buy“ | Purchase total €102.00. Fehlermeldung „Not enough cash for this purchase.“, Cash bleibt €100.00 | |
-| 4 | Coffee-Preis „abc“, dann „0“, dann „4.001“ eingeben | Jedes Mal eine Fehlermeldung, Preis bleibt €4.00 | |
-| 5 | Ab hier Tabelle unten (Strategie „Premium except Open Day“) für alle fünf Tage durchspielen | Cash und Ereignis je Tag wie in der Tabelle | |
-| 6 | Nach Tag 5 | Final cash €419.00, Overall gain / loss €319.00. Baseline €229.00, Difference +€90.00. Tag 4: €49.00 / €49.00 / €0.00 | |
-| 7 | Seite neu laden (F5) | Gleiches Endergebnis, gleiche Tabellen | |
-| 8 | Link kopieren, Tab schließen, Link in neuem Tab öffnen | Gleiches Endergebnis | |
-| 9 | Privates Fenster: App-URL ohne Parameter / mit `?game=` / mit `?game=abc` | Startseite / Fehlermeldung „not valid“ / Fehlermeldung „not valid“, jeweils ohne Absturz | |
-| 10 | Im privaten Fenster Heatwave starten | Anderer Link. „Today's event: Warm morning“: Coffee 10/5, Water 16/8, Granola bar 10/5. Cash €100.00. Spiel aus 2 unverändert | |
-| 11 | Heatwave: 10 Water kaufen, Water-Preis 1.50, Tag abschließen | 8 Water verkauft, Revenue €12.00, Gross profit €8.00, Cash €107.00, Lager Water 2 | |
-| 12 | „Start another game“ | Startseite. Der Heatwave-Link öffnet das Spiel unverändert (Tag 2, €107.00) | |
-| 13 | Im Heatwave-Spiel „Delete this game“, dann „Cancel“ | Spiel bleibt unverändert | |
-| 14 | „Delete this game“, dann „Delete game“ | Meldung „Game deleted.“ und Startseite. Der alte Heatwave-Link zeigt „not valid“. Das Exam-Week-Spiel ist unverändert | |
-| 15 | Schmaler Bildschirm: Handy oder Browser-Entwicklertools mit etwa 375 px Breite | Startseite, Ereignistabelle, Einkauf und Abschlussvergleich sind lesbar und ohne Überlappungen bedienbar. Seitliches Scrollen in Tabellen ist akzeptabel | |
+| 1 | App-URL ohne Parameter öffnen | Startseite mit „How to play“ (Goal, Each day, Score) und den Szenarien Exam Week und Heatwave | |
+| 2 | Exam Week wählen, „Start game“ | `?game=…` in der Adresszeile. Cash €100.00, „1 of 5“, Lager 0/0/0. „Today's event: Normal day“ mit 10 / 5 für jedes Produkt. Buy-Felder 0, Preisfelder 4.00 / 1.00 / 2.00 | |
+| 3 | Buy Coffee 10, Coffee-Preis 8.00 eintippen, **nicht** anwenden | Vorschau Coffee: „Demand: 5 · In stock: 0 · Expected sales: 5 · Cost: €20.00“. Total €20.00, Cash after €80.00. „Start trading day“ ist gesperrt mit Hinweis „Apply or discard …“. Cash oben weiter €100.00 | |
+| 4 | „Discard changes“ | Buy 0, Coffee-Preis 4.00, Handel freigegeben | |
+| 5 | Buy Coffee 51, „Apply purchases and prices“ | Total €102.00 und Warnung bei der Summe. Fehlermeldung „Not enough cash for this purchase.“, Cash €100.00, das Feld zeigt weiter 51. Danach „Discard changes“ | |
+| 6 | Coffee-Preis „abc“, dann „0“, dann „4.001“ (jeweils „Apply …“) | Vorschau „Invalid price“, jedes Mal eine Fehlermeldung, gespeicherter Preis bleibt €4.00, Handel gesperrt. Danach „Discard changes“ | |
+| 7 | Coffee-Preis „4“ eintippen | Keine Sperre des Handels, „Discard changes“ inaktiv | |
+| 8 | Ab hier die Tabelle unten für alle fünf Tage spielen: je Tag Mengen und Preise eintippen, „Apply …“, „Start trading day“ | Nach „Apply …“ stehen die Buy-Felder wieder auf 0. Cash je Tag wie in der Tabelle | |
+| 9 | Nach Tag 5 | Final cash €419.00, Overall gain / loss €319.00. Baseline €229.00, Difference +€90.00. Tag 4: €49.00 / €49.00 / €0.00 | |
+| 10 | Seite neu laden (F5); Link kopieren, Tab schließen, in neuem Tab öffnen | Jeweils gleiches Endergebnis und gleiche Tabellen | |
+| 11 | Privates Fenster: App-URL ohne Parameter / mit `?game=` / mit `?game=abc` | Startseite / „not valid“ / „not valid“, jeweils ohne Absturz | |
+| 12 | Im privaten Fenster Heatwave starten. Buy Water 10, Water-Preis 1.50, „Apply …“, „Start trading day“ | „Warm morning“: Coffee 10/5, Water 16/8, Granola bar 10/5. Danach 8 Water verkauft, Revenue €12.00, Gross profit €8.00, Cash €107.00, Lager Water 2. Exam-Week-Spiel unverändert | |
+| 13 | Heatwave-Link in einem zweiten Tab öffnen. Dort Buy Coffee 5 eintippen, nicht anwenden. Im ersten Tab „Start trading day“. Dann im zweiten Tab „Apply …“ | Zweiter Tab: Fehlermeldung „game has changed“ **und** „Your plan was discarded because the trading day changed.“ Tag 3, Buy 0, kein Coffee gekauft | |
+| 14 | „Start another game“ | Startseite. Der Heatwave-Link öffnet das Spiel unverändert | |
+| 15 | Im Heatwave-Spiel „Delete this game“, dann „Cancel“; danach „Delete this game“, „Delete game“ | Cancel ändert nichts. Danach „Game deleted.“ und Startseite, der alte Heatwave-Link zeigt „not valid“, das Exam-Week-Spiel ist unverändert | |
+| 16 | Schmaler Bildschirm: Handy oder Browser-Entwicklertools mit etwa 375 px Breite | Startseite, Ereignistabelle, Tagesplan (Felder, Vorschau, Knöpfe) und Abschlussvergleich sind lesbar und ohne Überlappungen bedienbar. Seitliches Scrollen in Tabellen ist akzeptabel | |
 
-**Strategie für Schritt 5 (Exam Week):**
+**Strategie für Schritt 8 (Exam Week):**
 
-- Preise vor dem Einkauf setzen.
-- „Premium“ = €8.00 / €2.00 / €4.00, „Reference“ = €4.00 / €1.00 / €2.00.
+- „Premium“ = Preise 8.00 / 2.00 / 4.00, „Reference“ = 4.00 / 1.00 / 2.00.
+- Preise und Mengen in denselben Plan eintippen, dann einmal „Apply …“.
 
-| Tag | Ereignis | Preise | Kaufen (Coffee / Water / Bars) | Cash nach Abschluss |
+| Tag | Ereignis | Preise | Buy (Coffee / Water / Bars) | Cash nach Abschluss |
 |---|---|---|---|---:|
 | 1 | Normal day | Premium | 5 / 5 / 5 | €152.50 |
 | 2 | Revision rush | Premium | 10 / 5 / 5 | €235.00 |
@@ -44,10 +49,13 @@ Ergebnis je Zeile eintragen: ✅ wie erwartet, ❌ mit kurzer Beschreibung.
 | 4 | Open Day | Reference | 14 / 14 / 14 | €366.50 |
 | 5 | Normal day | Premium | 5 / 5 / 5 | €419.00 |
 
-Die Sollwerte stammen aus `specs/campus-week.md` (Tests 23, 25 und 30) und sind
-dort von Hand gerechnet. Schritt 11: Warm morning hat für Water die Stufen (16, 8).
-Bei €1.50 ist die Nachfrage 8; 8 × €1.50 = €12.00 Revenue, 8 × €0.50 = €4.00
-Wareneinsatz, Cash €100.00 − €5.00 + €12.00 = €107.00.
+**Herkunft der Sollwerte:**
+
+- Schritte 8–9 stammen aus `specs/campus-week.md` (Tests 23, 25, 30). U14 in
+  `tests/test_daily_plan.py` prüft denselben Ablauf über die Oberfläche.
+- Schritt 12: Warm morning hat für Water die Stufen (16, 8). Bei €1.50 ist die
+  Nachfrage 8. Revenue 8 × €1.50 = €12.00, Wareneinsatz 8 × €0.50 = €4.00, Cash
+  €100.00 − €5.00 + €12.00 = €107.00.
 
 **Vor der Präsentation:**
 

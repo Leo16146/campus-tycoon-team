@@ -1,6 +1,6 @@
 # Tagesplan und Szenario-Rangliste
 
-**Stand:** Entwurf zur Prüfung, 22.11.2026, 12:30. Codex-Review vom 22.11., 12:17, ist eingearbeitet (E1-Punkte 1–4, E2-Regel 3, zwei E2-Tests). Nichts davon ist implementiert.
+**Stand:** 22.11.2026. Codex-Review vom 22.11., 12:17, ist eingearbeitet. **E1 ist auf dem Branch `p6-daily-plan` umgesetzt** (Tests U1–U23) und wartet auf Review und Browser-Abnahme. E2 ist nicht implementiert.
 Grundlage ist `main` @ `acd00b2` (P1–P4) und [`campus-week.md`](campus-week.md).
 Es gelten dieselben Regeln wie dort: Beträge in ganzen Cent, englische Oberfläche,
 Zugriff nur über das Token, eine Transaktion pro Aktion.
