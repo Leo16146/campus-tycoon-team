@@ -21,7 +21,10 @@ NAMES = [name for name, _, _ in CATALOG]
 DRAFT_KEYS = tuple(f"buy_{name}" for name in NAMES) + tuple(f"price_{name}" for name in NAMES)
 
 # Session values that belong to one game and must not carry over to another link.
-GAME_SESSION_KEYS = ("confirm_delete", "notices", "draft_of") + DRAFT_KEYS
+GAME_SESSION_KEYS = ("confirm_delete", "notices", "draft_of", "nickname") + DRAFT_KEYS
+
+LEADERBOARD_NOTE = ("The leaderboard is stored temporarily and may be reset when the "
+                    "server restarts.")
 
 HOW_TO_PLAY = (
     "**How to play**\n\n"
@@ -213,6 +216,38 @@ def cancel_delete():
     st.session_state.confirm_delete = False
 
 
+def publish(token):
+    try:
+        db.publish_result(DATABASE, token, st.session_state.get("nickname", ""))
+    except USER_ERRORS as error:
+        notify("error", str(error))
+        return
+    notify("success", "Your result is on the leaderboard.")
+
+
+def withdraw(token):
+    try:
+        db.withdraw_result(DATABASE, token)
+    except USER_ERRORS as error:
+        notify("error", str(error))
+        return
+    notify("success", "Your result was removed from the leaderboard.")
+
+
+def show_leaderboard(scenario):
+    """Rank, nickname and score only; never a link or token."""
+    try:
+        entries = db.leaderboard(DATABASE, scenario)
+    except db.DatabaseBusy:
+        st.caption("The leaderboard is busy right now. Please reload the page in a moment.")
+        return
+    if not entries:
+        st.caption("No results published yet.")
+        return
+    st.table([{"Rank": e["rank"], "Nickname": e["nickname"],
+               "Overall gain / loss": euros(e["score"])} for e in entries])
+
+
 def delete_current_game(token):
     """Leave the game only if it was deleted; otherwise keep its link in the URL."""
     st.session_state.confirm_delete = False
@@ -263,6 +298,11 @@ if "game" not in st.query_params:
     st.write("Each game has its own private link. Anyone with the link can play or delete the game.")
     scenario = st.radio("Scenario", list(SCENARIOS), format_func=SCENARIOS.__getitem__, key="scenario")
     st.button("Start game", type="primary", on_click=start_game, args=(scenario,))
+    st.subheader("Leaderboards")
+    for key, label in SCENARIOS.items():
+        st.markdown(f"**{label}**")
+        show_leaderboard(key)
+    st.caption(LEADERBOARD_NOTE)
     st.stop()
 
 token = st.query_params["game"]
@@ -368,6 +408,21 @@ else:
                            "Baseline gross profit": euros(baseline_profit),
                            "Difference": signed_euros(yours - baseline_profit)})
     st.table(comparison)
+
+    st.subheader(f"Leaderboard: {SCENARIOS[game['scenario']]}")
+    try:
+        entry = db.my_entry(DATABASE, token)
+    except db.DatabaseBusy:
+        stop_when_busy()
+    if entry is None:
+        st.text_input("Nickname for the leaderboard", max_chars=20, key="nickname",
+                      help="3–20 letters, digits, spaces, _ or -. Shown publicly with your result.")
+        st.button("Publish my result", on_click=publish, args=(token,))
+    else:
+        st.success(f"Your rank: {entry['rank']} of {entry['total']} (as {entry['nickname']})")
+        st.button("Remove my result", on_click=withdraw, args=(token,))
+    show_leaderboard(game["scenario"])
+    st.caption(LEADERBOARD_NOTE)
 
 if history:
     st.subheader("Daily results")

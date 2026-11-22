@@ -246,7 +246,8 @@ def test_final_result_values_remaining_stock_at_cost(path):
     values = {m.label: m.value for m in page.metric}
     assert [values[label] for label in ("Final cash", "Remaining stock at cost",
                                         "Overall gain / loss")] == ["€118.00", "€4.00", "€22.00"]
-    assert labels(page) == ["Delete this game", "Start another game"]
+    # The finished game offers publishing to the leaderboard (E2).
+    assert labels(page) == ["Publish my result", "Delete this game", "Start another game"]
 
 
 def test_edited_price_persists_and_changes_sales(path):

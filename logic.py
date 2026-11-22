@@ -50,6 +50,17 @@ def price_in_cents(text):
     return cents
 
 
+NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9 _-]{3,20}")
+
+
+def checked_nickname(text):
+    """A public leaderboard name: 3–20 letters, digits, spaces, _ or -."""
+    nickname = text.strip()
+    if not NICKNAME_PATTERN.fullmatch(nickname):
+        raise ValueError("Use 3–20 letters, digits, spaces, _ or -.")
+    return nickname
+
+
 def final_result(cash, products):
     stock_value = sum(p["stock"] * p["cost"] for p in products)
     return stock_value, cash + stock_value - STARTING_CASH
