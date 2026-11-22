@@ -237,9 +237,9 @@ keeps the rules testable with small numbers.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 141 tests on the branch `p8-polish`; 132 tests pass
-on `main` @ `5471fe0`, run in a fresh copy on 22.11.2026). GitHub Actions runs the
-same tests on every push; the first run on GitHub has not happened yet:
+**Automated** (`uv run pytest`, 141 tests). All pass on `main` @ `75b3614`, locally
+and in GitHub Actions (`.github/workflows/tests.yml`), which runs the same tests on
+every push and pull request (checked on 22.11.2026):
 
 | File | What it covers |
 |---|---|
