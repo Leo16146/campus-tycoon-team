@@ -60,6 +60,41 @@ def test_empty_or_unknown_link_is_rejected(path, token):
     assert labels(page) == ["Start game"]
 
 
+@pytest.mark.parametrize("token", ["", "abc", "!" * 43])
+def test_malformed_link_never_opens_the_database(tmp_path, monkeypatch, token):
+    # Spec test 9: the app checks the format before db.initialize() opens the file.
+    missing = tmp_path / "never-created.sqlite3"
+    monkeypatch.setenv("CAMPUS_TYCOON_DB", str(missing))
+    page = open_app(token)
+    assert not page.exception
+    assert "not valid" in page.error[0].value
+    assert labels(page) == ["Start a new game"]
+    assert not missing.exists()
+
+
+def test_start_another_game_keeps_the_current_game(path):
+    # "Start another game" leaves the game without changing it.
+    page = open_app()
+    click(page, "Start game")
+    a = page.query_params["game"]
+    page.number_input[0].set_value(3).run()
+    click(page, "Buy")
+    a_before = db.load(path, a)
+    assert "Bookmark its link" in page.caption[-1].value
+    click(page, "Start another game")
+    assert "game" not in page.query_params
+    assert labels(page) == ["Start game"]
+    assert db.load(path, a) == a_before
+    click(page, "Start game")
+    b = page.query_params["game"]
+    assert b != a
+    assert page.metric[0].value == "€100.00"
+    reopened = open_app(a)
+    assert reopened.metric[0].value == "€94.00"
+    assert reopened.table[0].value["Stock"].tolist() == [3, 0, 0]
+    assert db.load(path, a) == a_before
+
+
 def test_retired_scenario_shows_a_message(path):
     # Spec test 14b.
     token = db.create_game(path, "exam_week")

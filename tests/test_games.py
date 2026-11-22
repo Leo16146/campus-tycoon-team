@@ -57,6 +57,40 @@ def test_price_change_changes_only_its_own_game(path):
     assert db.load(path, b)[1][0]["price"] == 400
 
 
+def test_trade_and_history_stay_within_their_own_game(path):
+    # Trading A leaves every row of B unchanged; each game loads only its own sales.
+    a = db.create_game(path, "exam_week")
+    b = db.create_game(path, "heatwave")
+    db.buy(path, a, 1, "Kaffee", 6)
+    db.buy(path, b, 1, "Wasser", 8)
+    db.set_price(path, b, 1, "Wasser", "1.50")
+    db.trade(path, b, 1)
+    b_before = db.load(path, b)
+    with closing(sqlite3.connect(path)) as conn:
+        b_id = conn.execute("SELECT id FROM games WHERE token_hash = ?",
+                            (hashlib.sha256(b.encode()).hexdigest(),)).fetchone()[0]
+        b_rows = [conn.execute(f"SELECT * FROM {table} WHERE {column} = ? ORDER BY rowid",
+                               (b_id,)).fetchall()
+                  for table, column in (("games", "id"), ("products", "game_id"),
+                                        ("sales", "game_id"))]
+    db.trade(path, a, 1)
+    db.buy(path, a, 2, "Müsliriegel", 4)
+    db.trade(path, a, 2)
+    assert db.load(path, b) == b_before
+    with closing(sqlite3.connect(path)) as conn:
+        assert b_rows == [conn.execute(f"SELECT * FROM {table} WHERE {column} = ? ORDER BY rowid",
+                                       (b_id,)).fetchall()
+                          for table, column in (("games", "id"), ("products", "game_id"),
+                                                ("sales", "game_id"))]
+    history_a = db.load(path, a)[2]
+    assert [(row["day"], row["name"], row["sold"], row["revenue"]) for row in history_a] == [
+        (1, "Kaffee", 6, 2400), (1, "Wasser", 0, 0), (1, "Müsliriegel", 0, 0),
+        (2, "Kaffee", 0, 0), (2, "Wasser", 0, 0), (2, "Müsliriegel", 4, 800)]
+    history_b = b_before[2]
+    assert [(row["day"], row["name"], row["sold"], row["revenue"]) for row in history_b] == [
+        (1, "Kaffee", 0, 0), (1, "Wasser", 5, 750), (1, "Müsliriegel", 0, 0)]
+
+
 def test_delete_removes_only_its_own_game(path):
     # Spec test 4.
     a = db.create_game(path, "exam_week")

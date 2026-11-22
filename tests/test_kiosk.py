@@ -128,6 +128,23 @@ def test_rejected_price_preserves_saved_game(kiosk, text):
     assert db.load(path, token) == before
 
 
+@pytest.mark.parametrize(("action", "message"), [
+    (lambda path, token: db.buy(path, token, 1, "Kaffee", 1), "game has changed"),
+    (lambda path, token: db.set_price(path, token, 1, "Kaffee", "5.00"), "game has changed"),
+    (lambda path, token: db.buy(path, token, 2, "Tee", 1), "not in the kiosk catalogue"),
+    (lambda path, token: db.set_price(path, token, 2, "Tee", "5.00"), "not in the kiosk catalogue"),
+])
+def test_stale_day_or_unknown_product_is_rejected(kiosk, action, message):
+    # The game is on day 2: day 1 is stale, "Tee" is not a product.
+    path, token = kiosk
+    db.buy(path, token, 1, "Kaffee", 3)
+    db.trade(path, token, 1)
+    before = db.load(path, token)
+    with pytest.raises(ValueError, match=message):
+        action(path, token)
+    assert db.load(path, token) == before
+
+
 def test_completed_run_rejects_actions(kiosk):
     # Spec test 12.
     path, token = kiosk

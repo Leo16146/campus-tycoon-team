@@ -101,8 +101,22 @@ def delete_current_game(token):
     st.query_params.clear()
 
 
+def stop_with_link_error(message):
+    st.error(message)
+    st.button("Start a new game", on_click=leave_game)
+    st.stop()
+
+
 st.set_page_config(page_title="Campus Kiosk")
 st.title("Campus Kiosk")
+
+# A malformed link is rejected before the database is opened.
+if "game" in st.query_params:
+    try:
+        db.check_token(st.query_params["game"])
+    except ValueError as error:
+        stop_with_link_error(str(error))
+
 try:
     db.initialize(DATABASE)
 except ValueError as error:
@@ -122,9 +136,7 @@ forget_other_game(token)
 try:
     game, products, history = db.load(DATABASE, token)
 except ValueError as error:
-    st.error(str(error))
-    st.button("Start a new game", on_click=leave_game)
-    st.stop()
+    stop_with_link_error(str(error))
 
 day = game["day"]
 st.caption(f"Scenario: {SCENARIOS[game['scenario']]}")
@@ -209,3 +221,4 @@ else:
     delete_col, other_col = st.columns(2)
     delete_col.button("Delete this game", on_click=ask_delete)
     other_col.button("Start another game", on_click=leave_game)
+    st.caption("Your current game is kept. Bookmark its link before leaving.")
