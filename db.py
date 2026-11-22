@@ -3,7 +3,7 @@ import hashlib
 import re
 import secrets
 import sqlite3
-from contextlib import closing
+from contextlib import closing, contextmanager
 
 from logic import (CATALOG, SCENARIOS, STARTING_CASH, price_in_cents, purchase_cost,
                    sales_for_product, todays_event)
@@ -14,12 +14,41 @@ INVALID_LINK = ("This game link is not valid or the game is no longer available.
                 "Games are stored temporarily and may be removed.")
 RETIRED_SCENARIO = "This game uses a scenario that is no longer available."
 SOLO_SCHEMA = "This database uses the solo schema. Set CAMPUS_TYCOON_DB to a new file."
+BUSY = "The game is busy right now. Nothing was changed. Please try again in a moment."
+LOCK_TIMEOUT = 5  # seconds SQLite waits for another connection to release its lock
+
+
+class DatabaseBusy(Exception):
+    """Another connection holds the lock; the action did not run and can be tried again."""
 
 
 def connect(path):
-    connection = sqlite3.connect(path)
+    connection = sqlite3.connect(path, timeout=LOCK_TIMEOUT)
     connection.row_factory = sqlite3.Row
     return connection
+
+
+def is_lock_error(error):
+    return getattr(error, "sqlite_errorname", "").startswith(("SQLITE_BUSY", "SQLITE_LOCKED"))
+
+
+@contextmanager
+def transaction(path, write=True):
+    """Run the block as one transaction: commit at the end, roll back on any error.
+
+    A write transaction takes the write lock at the start. If the lock is not
+    free within LOCK_TIMEOUT, DatabaseBusy is raised and nothing is changed.
+    Other database errors are not hidden.
+    """
+    with closing(connect(path)) as conn:
+        try:
+            with conn:
+                conn.execute("BEGIN IMMEDIATE" if write else "BEGIN")
+                yield conn
+        except sqlite3.OperationalError as error:
+            if is_lock_error(error):
+                raise DatabaseBusy(BUSY) from error
+            raise
 
 
 def token_hash(token):
@@ -32,13 +61,21 @@ def check_token(token):
         raise ValueError(INVALID_LINK)
 
 
+def table_names(conn):
+    return {row["name"] for row in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table'")}
+
+
 def initialize(path):
-    with closing(connect(path)) as conn, conn:
-        conn.execute("BEGIN IMMEDIATE")
-        tables = {row["name"] for row in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type = 'table'")}
-        if "game" in tables and "games" not in tables:
-            raise ValueError(SOLO_SCHEMA)
+    """Create the tables if they are missing. Once they exist, this only reads,
+    so a page load does not wait for another player's write."""
+    with transaction(path, write=False) as conn:
+        tables = table_names(conn)
+    if "game" in tables and "games" not in tables:
+        raise ValueError(SOLO_SCHEMA)
+    if {"games", "products", "sales"} <= tables:
+        return
+    with transaction(path) as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS games (
             id INTEGER PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE,
             scenario TEXT NOT NULL, day INTEGER NOT NULL, cash INTEGER NOT NULL)""")
@@ -59,8 +96,7 @@ def create_game(path, scenario):
     if scenario not in SCENARIOS:
         raise ValueError("Unknown scenario.")
     token = secrets.token_urlsafe(32)
-    with closing(connect(path)) as conn, conn:
-        conn.execute("BEGIN IMMEDIATE")
+    with transaction(path) as conn:
         game_id = conn.execute(
             "INSERT INTO games (token_hash, scenario, day, cash) VALUES (?, ?, 1, ?)",
             (token_hash(token), scenario, STARTING_CASH)).lastrowid
@@ -88,8 +124,7 @@ def playable_game(conn, token):
 
 def load(path, token):
     check_token(token)
-    with closing(connect(path)) as conn:
-        conn.execute("BEGIN")
+    with transaction(path, write=False) as conn:
         game = playable_game(conn, token)
         products = conn.execute(
             """SELECT name, cost, reference, price, stock FROM products
@@ -112,8 +147,7 @@ def current_game(conn, token, expected_day):
 
 def buy(path, token, day, name, quantity):
     check_token(token)
-    with closing(connect(path)) as conn, conn:
-        conn.execute("BEGIN IMMEDIATE")
+    with transaction(path) as conn:
         game = current_game(conn, token, day)
         product = conn.execute("SELECT cost FROM products WHERE game_id = ? AND name = ?",
                                (game["id"], name)).fetchone()
@@ -128,8 +162,7 @@ def buy(path, token, day, name, quantity):
 def set_price(path, token, day, name, text):
     check_token(token)
     price = price_in_cents(text)
-    with closing(connect(path)) as conn, conn:
-        conn.execute("BEGIN IMMEDIATE")
+    with transaction(path) as conn:
         game = current_game(conn, token, day)
         changed = conn.execute("UPDATE products SET price = ? WHERE game_id = ? AND name = ?",
                                (price, game["id"], name))
@@ -139,8 +172,7 @@ def set_price(path, token, day, name, text):
 
 def trade(path, token, day):
     check_token(token)
-    with closing(connect(path)) as conn, conn:
-        conn.execute("BEGIN IMMEDIATE")
+    with transaction(path) as conn:
         game = current_game(conn, token, day)
         _, tiers = todays_event(game["scenario"], day)
         total_revenue = 0
@@ -161,8 +193,7 @@ def trade(path, token, day):
 def delete_game(path, token):
     """Delete this game only. Afterwards its link no longer works."""
     check_token(token)
-    with closing(connect(path)) as conn, conn:
-        conn.execute("BEGIN IMMEDIATE")
+    with transaction(path) as conn:
         game = authorized_game(conn, token)
         conn.execute("DELETE FROM sales WHERE game_id = ?", (game["id"],))
         conn.execute("DELETE FROM products WHERE game_id = ?", (game["id"],))

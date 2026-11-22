@@ -1,6 +1,6 @@
 # Campus Week – Team-Erweiterung von Campus Tycoon
 
-**Stand:** 22.11.2026. P0 (technischer Versuch) ist abgeschlossen, siehe unten. P1 (Spieltrennung) und P2 (Szenarien) sind auf `main`. P3 (Baseline und Abschlussvergleich) ist auf dem Branch `p3-baseline` umgesetzt und wartet auf das Review. P4 ist noch nicht umgesetzt. Grundlage sind der Solo-Code auf `main` (Commit `c412e92`), [`specs/first-feature.md`](first-feature.md) und die [offizielle Projektseite](https://2477-introduction-programming.gitlab.io/wiki/team-project/), abgerufen am 22.11.2026.
+**Stand:** 22.11.2026. P0 (technischer Versuch) ist abgeschlossen, siehe unten. P1 (Spieltrennung), P2 (Szenarien) und P3 (Baseline) sind auf `main`. P4 (Release-Prüfung: Sperrbehandlung, Audit, Dokumentation) ist auf dem Branch `p4-release-check` und wartet auf das Review. **Offen:** Deployment der fertigen App und Abnahme nach `docs/acceptance-checklist.md`. Grundlage sind der Solo-Code auf `main` (Commit `c412e92`), [`specs/first-feature.md`](first-feature.md) und die [offizielle Projektseite](https://2477-introduction-programming.gitlab.io/wiki/team-project/), abgerufen am 22.11.2026.
 
 Kennzeichnung in diesem Dokument:
 
@@ -197,6 +197,7 @@ Diese Grenzen kommen in README und Repo-Walkthrough:
 - **Spiel:** Das Spiel ist deterministisch, alles ist bekannt. Wer die Regel „3 × min(oben, Bestand) > min(unten, Bestand)“ verstanden hat, kann es lösen. Bei ausreichendem Bestand wird daraus „3 × oben > unten“. Das ist als Lernspiel gewollt.
 - **Mehrere Nutzerinnen:** Mehrere Personen können gleichzeitig getrennte Spiele spielen. Es gibt keinen gemeinsamen Wettbewerb.
 - **Ressourcen:** Die Zahl der Spiele ist nicht begrenzt, es gibt kein automatisches Aufräumen.
+- **Gleichzeitige Zugriffe:** SQLite erlaubt jeweils nur einen Schreibvorgang. Ist die Sperre nicht innerhalb von 5 Sekunden frei, wird die Aktion nicht ausgeführt (`DatabaseBusy`), und die App bittet darum, es erneut zu versuchen. Es gibt keine automatische Wiederholung. Andere Datenbankfehler werden nicht abgefangen (P4, `tests/test_locks.py`).
 - **Wie es sich ändern könnte:** dauerhafte Speicherung durch Austausch von `db.py` (zum Beispiel Postgres); Identität über `st.login`; Rangliste je Szenario auf dieser Grundlage.
 
 ## Technischer Versuch P0 (Ergebnis)
@@ -374,6 +375,11 @@ Zur Information, kein Test: In Heatwave bringt die beste Preisstufe je Produkt u
   2. `pip-audit` mit genau dieser Datei als Prüfziel ausführen (`-r <datei>`).
   3. Ergebnis und Datum in der README festhalten.
 - Die genauen Optionen von `pip-audit` (etwa für Hashes oder ohne erneute Auflösung) prüfen wir beim Ausführen. Ein `uvx pip-audit` ohne Prüfziel reicht nicht.
+- **Ergebnis (22.11.2026):**
+  - `uv export --frozen --all-groups --no-emit-project --format requirements-txt` in eine temporäre Datei außerhalb des Repos geschrieben.
+  - `pip-audit 2.10.1 -r <datei> --require-hashes --disable-pip` prüfte 37 Pakete.
+  - Die zwei Pakete mit Plattformbedingung (`colorama`, `watchdog`) wurden einzeln mit `--no-deps` geprüft.
+  - **Keine bekannten Schwachstellen in allen 39 Paketen.** Es waren keine Updates nötig.
 
 ## Zuordnung zu den Bewertungskriterien
 

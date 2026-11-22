@@ -14,6 +14,9 @@ DATABASE = Path(os.environ.get("CAMPUS_TYCOON_DB", Path(__file__).with_name("cam
 # Saved games use the original product names as SQLite keys.
 PRODUCT_LABELS = {"Kaffee": "Coffee", "Wasser": "Water", "Müsliriegel": "Granola bar"}
 
+# Errors that are shown to the player as a message instead of a crash.
+USER_ERRORS = (ValueError, db.DatabaseBusy)
+
 # Session values that belong to one game and must not carry over to another link.
 GAME_SESSION_KEYS = ("product", "quantity", "confirm_delete", "notice")
 
@@ -52,7 +55,10 @@ def show_notice():
 
 
 def start_game(scenario):
-    st.query_params["game"] = db.create_game(DATABASE, scenario)
+    try:
+        st.query_params["game"] = db.create_game(DATABASE, scenario)
+    except USER_ERRORS as error:
+        st.session_state.notice = ("error", str(error))
 
 
 def leave_game():
@@ -72,7 +78,7 @@ def buy_selected(token, day, name, quantity):
     try:
         db.buy(DATABASE, token, day, name, quantity)
         st.session_state.notice = ("success", f"Purchased {quantity} × {PRODUCT_LABELS[name]}.")
-    except ValueError as error:
+    except USER_ERRORS as error:
         st.session_state.notice = ("error", str(error))
 
 
@@ -81,7 +87,7 @@ def save_price(token, day, name):
     try:
         db.set_price(DATABASE, token, day, name, st.session_state[key])
         st.session_state.notice = ("success", f"Selling price saved for {PRODUCT_LABELS[name]}.")
-    except ValueError as error:
+    except USER_ERRORS as error:
         st.session_state.notice = ("error", str(error))
 
 
@@ -89,7 +95,7 @@ def trade_day(token, day):
     try:
         db.trade(DATABASE, token, day)
         st.session_state.notice = ("success", f"Day {day} complete.")
-    except ValueError as error:
+    except USER_ERRORS as error:
         st.session_state.notice = ("error", str(error))
 
 
@@ -105,10 +111,16 @@ def delete_current_game(token):
     try:
         db.delete_game(DATABASE, token)
         st.session_state.notice = ("success", "Game deleted.")
-    except ValueError as error:
+    except USER_ERRORS as error:
         st.session_state.notice = ("error", str(error))
     st.session_state.confirm_delete = False
     st.query_params.clear()
+
+
+def stop_when_busy(message):
+    st.warning(message)
+    st.button("Try again")
+    st.stop()
 
 
 def stop_with_link_error(message):
@@ -129,6 +141,8 @@ if "game" in st.query_params:
 
 try:
     db.initialize(DATABASE)
+except db.DatabaseBusy as error:
+    stop_when_busy(str(error))
 except ValueError as error:
     st.error(str(error))
     st.stop()
@@ -145,6 +159,8 @@ token = st.query_params["game"]
 forget_other_game(token)
 try:
     game, products, history = db.load(DATABASE, token)
+except db.DatabaseBusy as error:
+    stop_when_busy(str(error))
 except ValueError as error:
     stop_with_link_error(str(error))
 
