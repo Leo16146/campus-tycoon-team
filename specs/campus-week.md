@@ -1,6 +1,6 @@
 # Campus Week – Team-Erweiterung von Campus Tycoon
 
-**Stand:** 22.11.2026. P0 (technischer Versuch) ist abgeschlossen, siehe unten. P1 (Spieltrennung), P2 (Szenarien), P3 (Baseline) und P4 (Release-Prüfung) sind auf `main`. Tagesplan (E1), Rangliste (E2) und CSV-Export sind in [`daily-plan-and-leaderboard.md`](daily-plan-and-leaderboard.md) beschrieben. Die fertige App ist deployed. **Offen:** Abnahme auf der deployten App nach `docs/acceptance-checklist.md`. Grundlage sind der Solo-Code auf `main` (Commit `c412e92`), [`specs/first-feature.md`](first-feature.md) und die [offizielle Projektseite](https://2477-introduction-programming.gitlab.io/wiki/team-project/), abgerufen am 22.11.2026.
+**Stand:** 22.11.2026. P0 (technischer Versuch) ist abgeschlossen, siehe unten. P1 (Spieltrennung), P2 (Szenarien), P3 (Baseline) und P4 (Release-Prüfung) sind auf `main`. Tagesplan (E1), Rangliste (E2) und CSV-Export sind in [`daily-plan-and-leaderboard.md`](daily-plan-and-leaderboard.md) beschrieben. Die fertige App ist deployed und auf der öffentlichen URL abgenommen (23.11.2026, siehe `docs/acceptance-checklist.md`). Grundlage sind der Solo-Code auf `main` (Commit `c412e92`), [`specs/first-feature.md`](first-feature.md) und die [offizielle Projektseite](https://2477-introduction-programming.gitlab.io/wiki/team-project/), abgerufen am 22.11.2026.
 
 Kennzeichnung in diesem Dokument:
 

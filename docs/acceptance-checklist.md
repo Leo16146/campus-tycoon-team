@@ -1,8 +1,18 @@
 # Abnahme auf der deployten App
 
-**Status auf der deployten App: offen.** Die fertige App ist deployed, die Prüfliste
-wurde dort aber noch nicht durchgespielt. Die P0-URL zeigt nur den Prototyp und zählt
-nicht.
+**Status auf der deployten App (https://39p9i3vcvzvy66yjhja8xk.streamlit.app): durchgeführt.**
+
+- **22.11.2026, `main` @ `047290e`:** Alle Schritte unten automatisiert in Chromium
+  gegen die öffentliche URL geprüft, mit erkennbarem Testeintrag „Acceptance Test“
+  statt „Ana“. Alle Abläufe bestanden. Drei Prüfungen meines Skripts erwarteten
+  zunächst die Meldungstexte eines älteren Stands; mit dem tatsächlich laufenden Stand
+  nachgeprüft: 11 von 11 bestanden. Testeinträge zurückgezogen, alle Testspiele
+  gelöscht (Schritt 17).
+- **23.11.2026, `main` @ `c825ef1`:** Kurzprüfung, dass die letzte Korrektur online
+  aktiv ist; Testspiel danach gelöscht.
+- **Echtes Handy:** von Leo Böhler geprüft, die App läuft.
+
+Die P0-URL zeigte nur den Prototyp und zählt nicht.
 
 **Lokaler Browserdurchlauf (22.11.2026, automatisiert):** Die Schritte unten wurden
 automatisiert in Chromium (Playwright) gegen die App auf `localhost` mit einer leeren

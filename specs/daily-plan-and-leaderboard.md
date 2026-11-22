@@ -1,6 +1,6 @@
 # Tagesplan und Szenario-Rangliste
 
-**Stand:** 22.11.2026. **E1 ist umgesetzt** (Tests U1–U26), **E2 ebenfalls** (Tests L1–L16), zusammen mit einem CSV-Export. Ein lokaler Browserdurchlauf (Chromium, 30/30) ist bestanden; die Abnahme auf der deployten App ist **offen**.
+**Stand:** 22.11.2026. **E1 ist umgesetzt** (Tests U1–U26), **E2 ebenfalls** (Tests L1–L16), zusammen mit einem CSV-Export. Ein lokaler Browserdurchlauf (Chromium, 30/30) und die Abnahme auf der deployten App sind bestanden (23.11.2026).
 Grundlage ist `main` @ `acd00b2` (P1–P4) und [`campus-week.md`](campus-week.md).
 Es gelten dieselben Regeln wie dort: Beträge in ganzen Cent, englische Oberfläche,
 Zugriff nur über das Token, eine Transaktion pro Aktion.
