@@ -5,8 +5,8 @@ import secrets
 import sqlite3
 from contextlib import closing, contextmanager
 
-from logic import (CATALOG, SCENARIOS, STARTING_CASH, price_in_cents, purchase_cost,
-                   sales_for_product, todays_event)
+from logic import (CATALOG, PRODUCT_LABELS, SCENARIOS, STARTING_CASH, price_in_cents,
+                   purchase_cost, sales_for_product, todays_event)
 
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_-]{43}")
@@ -190,14 +190,25 @@ def set_price(path, token, day, name, text):
 
 def checked_plan(quantities, prices):
     """Validate a daily plan: whole quantities of 0 or more and valid prices for
-    exactly the catalogue products. Returns the prices in cents."""
+    exactly the catalogue products. Returns the prices in cents.
+
+    Errors name the product, for example "Coffee: The selling price must be
+    positive.", and the first invalid product in catalogue order is reported.
+    """
     names = {name for name, _, _ in CATALOG}
     if set(quantities) != names or set(prices) != names:
         raise ValueError("The plan does not match the kiosk catalogue.")
-    for quantity in quantities.values():
+    cents = {}
+    for name, _, _ in CATALOG:
+        label = PRODUCT_LABELS[name]
+        quantity = quantities[name]
         if type(quantity) is not int or quantity < 0:
-            raise ValueError("Enter a whole number of 0 or more for each purchase.")
-    return {name: price_in_cents(text) for name, text in prices.items()}
+            raise ValueError(f"{label}: Enter a whole number of 0 or more to buy.")
+        try:
+            cents[name] = price_in_cents(prices[name])
+        except ValueError as error:
+            raise ValueError(f"{label}: {error}") from None
+    return cents
 
 
 def apply_plan(path, token, day, quantities, prices, seen=None):

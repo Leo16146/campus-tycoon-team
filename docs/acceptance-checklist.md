@@ -24,9 +24,9 @@ Ergebnis je Zeile eintragen: ✅ wie erwartet, ❌ mit kurzer Beschreibung.
 | 3 | Buy Coffee 10, Coffee-Preis 8.00 eintippen, **nicht** anwenden | Vorschau Coffee: „Demand: 5 · In stock: 0 · Expected sales: 5 · Cost: €20.00“. Total €20.00, Cash after €80.00. „Start trading day“ ist gesperrt mit Hinweis „Apply or discard …“. Cash oben weiter €100.00 | |
 | 4 | „Discard changes“ | Buy 0, Coffee-Preis 4.00, Handel freigegeben | |
 | 5 | Buy Coffee 51, „Apply purchases and prices“ | Total €102.00 und Warnung bei der Summe. Fehlermeldung „Not enough cash for this purchase.“, Cash €100.00, das Feld zeigt weiter 51. Danach „Discard changes“ | |
-| 6 | Coffee-Preis „abc“, dann „0“, dann „4.001“ (jeweils „Apply …“) | Vorschau „Invalid price“, jedes Mal eine Fehlermeldung, gespeicherter Preis bleibt €4.00, Handel gesperrt. Danach „Discard changes“ | |
+| 6 | Coffee-Preis „abc“, dann „0“, dann „4.001“ (jeweils „Apply …“) | Vorschau „Invalid price“, jedes Mal eine Fehlermeldung, die mit „Coffee:“ beginnt, gespeicherter Preis bleibt €4.00, Handel gesperrt. Danach „Discard changes“ | |
 | 7 | Coffee-Preis „4“ eintippen | Keine Sperre des Handels, „Discard changes“ inaktiv | |
-| 8 | Ab hier die Tabelle unten für alle fünf Tage spielen: je Tag Mengen und Preise eintippen, „Apply …“, „Start trading day“ | Nach „Apply …“ stehen die Buy-Felder wieder auf 0. Cash je Tag wie in der Tabelle | |
+| 8 | Ab hier die Tabelle unten für alle fünf Tage spielen: je Tag Mengen und Preise eintippen, „Apply …“, „Start trading day“ | Nach „Apply …“ stehen die Buy-Felder wieder auf 0. Cash je Tag wie in der Tabelle. Nach Tag 1 steht oben „Day 1 result: 15 units sold · revenue €70.00 · gross profit €52.50 · baseline gross profit €35.00“ | |
 | 9 | Nach Tag 5 | Final cash €419.00, Overall gain / loss €319.00. Baseline €229.00, Difference +€90.00. Tag 4: €49.00 / €49.00 / €0.00 | |
 | 10 | Seite neu laden (F5); Link kopieren, Tab schließen, in neuem Tab öffnen | Jeweils gleiches Endergebnis und gleiche Tabellen | |
 | 11 | Privates Fenster: App-URL ohne Parameter / mit `?game=` / mit `?game=abc` | Startseite / „not valid“ / „not valid“, jeweils ohne Absturz | |

@@ -43,6 +43,9 @@ branch `p0-token-spike`). It is not the finished app.
   changes.
   Unsold stock stays in the inventory and all amounts are whole cents.
 - **How to play** on the start page explains the goal, the daily steps and the score.
+- **Day result right after trading:** units sold, revenue and gross profit of the
+  last day next to the baseline's gross profit for that day. Error messages of the
+  plan name the product, for example *"Coffee: The selling price must be positive."*
 - **Final comparison** after day 5: your overall gain / loss next to the baseline
   strategy, the signed difference and the gross profit for each day.
 - **Delete with confirmation**, *Start another game*, and clear messages for
@@ -95,6 +98,8 @@ Git. The app needs no secrets or API keys.
 | `tests/` | pytest tests (see below) |
 | `specs/campus-week.md` | Specification of the team extension with all expected values |
 | `docs/acceptance-checklist.md` | Manual check on the deployed app |
+| `docs/demo-script.md` | Plan for the live demo and questions for the walkthrough |
+| `.github/workflows/tests.yml` | Runs `uv sync --locked` and `uv run pytest` on GitHub for every push and pull request |
 | `specs/first-feature.md`, `docs/product-brief.html` | Documents of the original solo project |
 
 ## Access and storage
@@ -104,8 +109,9 @@ Git. The app needs no secrets or API keys.
   token, looks up the game by its hash inside the transaction and works only on
   that game's rows. A game id from the browser never grants access.
 - **Malformed links** are rejected before the database is opened.
-- **Storage** is SQLite on the server. Each action (buy, set price, trade,
-  delete) is one transaction: it is saved completely or not at all.
+- **Storage** is SQLite on the server. Each action (start game, apply plan, buy,
+  set price, trade, delete) is one transaction: it is saved completely or not at
+  all.
 - **Temporary storage.** Streamlit Community Cloud does not guarantee that local
   files persist, so games can disappear, for example after a restart. The app says
   so on every game screen. A lost game shows the same message as an invalid link.
@@ -117,6 +123,90 @@ Git. The app needs no secrets or API keys.
     the game link.
   - A busy **page load** shows *"The game is busy right now and could not be
     loaded. Please try again in a moment."* and a *Try again* button.
+
+## How it works and why
+
+The detailed specifications in `specs/` are written in German. This section
+summarises the design in English.
+
+### What happens on a click
+
+Streamlit reruns `app.py` from top to bottom after every input or click. Take
+*Apply purchases and prices* as an example:
+
+1. The button's callback `apply_plan` in `app.py` collects the fields of today's
+   plan and calls `db.apply_plan`.
+2. `db.apply_plan` checks the token format (`check_token`) and opens one
+   transaction (`transaction`).
+3. Inside that transaction it:
+   - finds the game by the token's hash (`authorized_game`),
+   - checks the day (`current_game`) and that the window still shows the saved
+     state (`check_unchanged`),
+   - validates the plan (`checked_plan`, using `price_in_cents` from `logic.py`),
+   - checks the total against the cash,
+   - and only then writes all purchases and prices.
+4. Streamlit reruns `app.py`. It loads the game again with `db.load` and shows
+   the new state and the queued messages (`notify`, `show_notices`).
+
+`logic.py` holds the rules and never touches the database: the catalogue,
+`EVENTS`, `demand`, `sales_for_product`, `final_result` and the baseline. That
+keeps the rules testable with small numbers.
+
+### Why it is built this way
+
+- **Whole cents instead of floats.** €0.10 + €0.20 is not exactly €0.30 as a
+  float. All amounts are integers in cents and are only formatted as `€4.00` for
+  display.
+- **Demand tiers instead of factors.** With unit costs at half the reference price,
+  twice the reference price always earns more per unit. A plain factor would change
+  only the quantity, not the better price. Fixed tiers per event, for example
+  Open Day (14, 0), make the price decision depend on the day.
+- **Fixed scenarios instead of live data.** Every player of a scenario gets the
+  same five events, so results are comparable and the tests are deterministic.
+  There is no external service that can fail during the demo.
+- **Private links instead of passwords.** A random token from
+  `secrets.token_urlsafe(32)` has 256 random bits, so guessing one is
+  computationally infeasible. Storing only its SHA-256 hash means a copy of the
+  database does not reveal working links. A slow password hash is unnecessary
+  here, because the token is random and not chosen by a person. Own passwords
+  would need slow hashing, rate limits and password resets, and Streamlit loses
+  `st.session_state` on every reload.
+- **Authorisation in `db.py`, not in the interface.** Every function that reads or
+  changes a game receives the token and works only on the rows of the game found
+  for it. A game id from the browser never grants access.
+- **One transaction per action.** Every database access runs inside
+  `transaction()`:
+  - Writing actions (create, apply plan, buy, set price, trade, delete) start with
+    `BEGIN IMMEDIATE`, which takes SQLite's write lock at once.
+  - Reading (`load`, the table check in `initialize`) starts with a plain `BEGIN`
+    and only has to wait while another connection is committing.
+  - The block is committed at the end and rolled back on any error, so a purchase
+    or a trading day is saved completely or not at all.
+  - If a lock is not free within 5 seconds, `DatabaseBusy` is raised and the app
+    asks the player to try again. Nothing is retried automatically.
+- **Snapshots against outdated windows.** Each window remembers what it showed
+  (`snapshot`: day, cash, stock and price per product). `apply_plan` and `trade`
+  compare it with the saved state inside the transaction. So an old window cannot
+  undo prices set in another window, or trade with prices it never displayed.
+- **No `st.form` for the daily plan.** A form sends its values only when it is
+  submitted, so the live preview of cost and expected sales would not update.
+  Normal widgets rerun the app on every input. Nothing is saved before *Apply*.
+  The draft is kept in `st.session_state`. `fill_draft`, `clear_draft` and
+  `follow_saved_state` decide when it is filled, reset or discarded.
+- **SQLite on Streamlit Community Cloud.** SQLite needs no secrets and no extra
+  service, and it is what the course apps use. The price is temporary storage. The
+  app says so on every game screen, and a lost game shows a clear message instead
+  of an error.
+
+### What the tests cover and what they do not
+
+- **Covered:** the rules with hand-computed values, accepted and rejected actions,
+  separate games, invalid tokens, rollbacks, locked databases, two windows and the
+  full five-day games.
+- **How:** storage tests use temporary SQLite files. Interface tests drive
+  `app.py` with Streamlit's `AppTest`.
+- **Not covered:** a real browser, Streamlit Community Cloud, page layout and
+  narrow screens. These are checked by hand with `docs/acceptance-checklist.md`.
 
 ## Known limits
 
@@ -135,7 +225,9 @@ Git. The app needs no secrets or API keys.
 ## How it could change
 
 - **Persistent storage:** replace SQLite with a hosted database such as Postgres.
-  Only `db.py` would change.
+  Most storage changes would be concentrated in `db.py`; the dependencies, the
+  configuration (a connection secret on the host) and the storage tests would
+  also have to change.
 - **Accounts:** use `st.login` to identify players, still with one game per
   authorised owner.
 - **Leaderboard:** compare results per scenario, which is fair because all players
@@ -145,7 +237,9 @@ Git. The app needs no secrets or API keys.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 132 tests, all passing on 22.11.2026):
+**Automated** (`uv run pytest`, 141 tests on the branch `p8-polish`; 132 tests pass
+on `main` @ `5471fe0`, run in a fresh copy on 22.11.2026). GitHub Actions runs the
+same tests on every push; the first run on GitHub has not happened yet:
 
 | File | What it covers |
 |---|---|
@@ -155,6 +249,7 @@ Git. The app needs no secrets or API keys.
 | `tests/test_baseline.py` | Baseline (€229.00 / €184.00), full five-day games (€319.00 / €270.00), results above and below the baseline, budget rule |
 | `tests/test_locks.py` | Busy database: message instead of crash, no partial changes, success once after release, no automatic retry, busy delete keeps the link, separate message for page loads, other errors not hidden |
 | `tests/test_daily_plan.py` | Daily plan: preview, atomic apply, rejected inputs kept for correction, total above cash, catalogue check, rollback, other games unchanged, day finished or game changed in another window, numeric price comparison, discard, full game through the UI |
+| `tests/test_polish.py` | Day result summary (also below the baseline and only for its own game), product names in plan errors |
 | `tests/test_app.py` | Start page, invalid links, new session via link, two windows, switching links, delete with confirmation, final results |
 
 The expected values are computed by hand in `specs/campus-week.md`, not by the
