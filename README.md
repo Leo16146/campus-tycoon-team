@@ -11,12 +11,13 @@ baseline strategy.
 
 ## Team and deployment
 
-> **Missing before submission:** the deployed URL and the names and student numbers
-> of all team members. These details have not been added yet.
+> **Missing before submission:** the URL of the deployed app and the names and student
+> numbers of all team members. These details have not been added yet.
 
 | | |
 |---|---|
-| Deployed app (from `main`, `app.py`, Python 3.12) | *not deployed yet* |
+| Deployed app | Deployed on Streamlit Community Cloud from `main` (`app.py`, Python 3.12). URL: *to be added* |
+| What is online | Always the current `main`. Changes on branches that are not merged yet are not online. The acceptance checklist has not been run on the deployed app yet. |
 | Team members and student numbers | *to be added* |
 
 The earlier P0 prototype URL showed a throwaway test page (`spike_app.py` on the
