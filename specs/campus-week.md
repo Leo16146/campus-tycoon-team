@@ -375,7 +375,7 @@ Zur Information, kein Test: In Heatwave bringt die beste Preisstufe je Produkt u
   2. `pip-audit` mit genau dieser Datei als Prüfziel ausführen (`-r <datei>`).
   3. Ergebnis und Datum in der README festhalten.
 - Die genauen Optionen von `pip-audit` (etwa für Hashes oder ohne erneute Auflösung) prüfen wir beim Ausführen. Ein `uvx pip-audit` ohne Prüfziel reicht nicht.
-- **Ergebnis (22.11.2026):**
+- **Ergebnis (22.11.2026, 02:16; wiederholt um 15:00 mit demselben Ergebnis):**
   - `uv export --frozen --all-groups --no-emit-project --format requirements-txt` in eine temporäre Datei außerhalb des Repos geschrieben.
   - `pip-audit 2.10.1 -r <datei> --require-hashes --disable-pip` prüfte 37 Pakete.
   - Die zwei Pakete mit Plattformbedingung (`colorama`, `watchdog`) wurden einzeln mit `--no-deps` geprüft.

@@ -267,7 +267,7 @@ survived a reboot was not clearly recorded.
 **Not done yet:** deploying the finished app and running the acceptance checklist
 on it.
 
-**Dependency audit** (22.11.2026):
+**Dependency audit** (22.11.2026, 02:16 and repeated at 15:00 CET):
 
 1. Exported `uv.lock` with `uv export --frozen --all-groups --no-emit-project
    --format requirements-txt` to a temporary file outside the repository.
