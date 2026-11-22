@@ -1,6 +1,6 @@
 # Tagesplan und Szenario-Rangliste
 
-**Stand:** Entwurf zur Prüfung, 22.11.2026, 12:15. Nichts davon ist implementiert.
+**Stand:** Entwurf zur Prüfung, 22.11.2026, 12:30. Codex-Review vom 22.11., 12:17, ist eingearbeitet (E1-Punkte 1–4, E2-Regel 3, zwei E2-Tests). Nichts davon ist implementiert.
 Grundlage ist `main` @ `acd00b2` (P1–P4) und [`campus-week.md`](campus-week.md).
 Es gelten dieselben Regeln wie dort: Beträge in ganzen Cent, englische Oberfläche,
 Zugriff nur über das Token, eine Transaktion pro Aktion.
@@ -64,9 +64,17 @@ Die Startseite erklärt bisher weder das Ziel noch die Bewertung.
 - **Summe:** *Total purchase cost* und *Cash after purchases*. Ist die Summe größer
   als die Kasse, erscheint dort ein Hinweis.
 - **Knopf „Apply purchases and prices“** ruft `db.apply_plan(path, token, day,
-  quantities, prices)` auf, in **einer** Transaktion:
-  1. Token und Tag prüfen (`current_game`).
-  2. Alle Mengen prüfen (ganze Zahl ≥ 0) und alle Preise (`price_in_cents`).
+  quantities, prices)` auf.
+  - `quantities` ist ein Dict von Produktschlüssel (`"Kaffee"`, `"Wasser"`,
+    `"Müsliriegel"`) auf eine ganze Zahl.
+  - `prices` ist ein Dict von Produktschlüssel auf den eingegebenen Text.
+  - Beide müssen **genau** die drei Produkte des Katalogs enthalten. Fehlende oder
+    unbekannte Produkte werden mit `ValueError` *„The plan does not match the
+    kiosk catalogue.“* abgelehnt, nie mit einem `KeyError`.
+  - Alles läuft in **einer** Transaktion:
+  1. Token-Format prüfen (`check_token`), dann Token und Tag (`current_game`).
+  2. Die Produktschlüssel prüfen, dann alle Mengen (ganze Zahl ≥ 0) und alle
+     Preise (`price_in_cents`).
   3. Prüfen, ob die Kasse für die **Gesamtsumme** reicht.
   4. Erst dann alle Käufe und Preise speichern.
   - Ist eine Eingabe ungültig oder die Summe nicht bezahlbar, wird **nichts**
@@ -77,21 +85,50 @@ Die Startseite erklärt bisher weder das Ziel noch die Bewertung.
   saved.“ oder „Prices saved.“
 - **Nichts geändert:** Sind alle Mengen 0 und alle Preise gleich den
   gespeicherten, erscheint „Nothing to apply.“ und es wird nichts geschrieben.
-- **Preisfelder** werden nur aus der Datenbank gefüllt, wenn sie noch leer sind:
-  beim Öffnen des Spiels, nach erfolgreichem Anwenden, nach einem Tagesabschluss
-  und beim Linkwechsel. Heute geschieht das bei **jedem** Lauf (`app.py`, Zeile
-  209); das würde eingetippte, noch nicht angewendete Preise überschreiben.
-- **„Start trading day“ ist gesperrt** (`disabled`), solange eine Menge > 0 ist
-  oder ein Preisfeld vom gespeicherten Preis abweicht. Daneben steht: *„Apply or
-  undo your changes before trading.“* So wird nie mit alten Preisen gehandelt,
-  weil jemand das Anwenden vergessen hat.
+  Preise werden **numerisch** verglichen (siehe „Ungespeicherte Änderungen“).
+- **Entwurfswerte im Session State:**
+  - Ein Mengen- oder Preisfeld wird aus der Datenbank initialisiert, wenn sein
+    Session-State-Schlüssel **noch nicht existiert**.
+  - Ein absichtlich geleertes Preisfeld bleibt leer. Es ist eine ungültige Eingabe
+    und wird nicht durch den gespeicherten Preis ersetzt.
+  - **Ausdrücklich zurückgesetzt** (Mengen 0, Preise wie gespeichert) werden die
+    Felder nach erfolgreichem Anwenden, nach einem Tagesabschluss, beim
+    Linkwechsel, beim erkannten Tageswechsel und mit „Discard changes“.
+  - Bei einer **Ablehnung** (ungültige Eingabe, nicht bezahlbar, gesperrte
+    Datenbank) bleiben alle Eingaben erhalten, damit man sie korrigieren kann.
+  - Heute setzt `app.py` (Zeile 209) die Preisfelder bei **jedem** Lauf neu. Das
+    würde eingetippte Preise überschreiben und entfällt.
+- **Ungespeicherte Änderungen** liegen vor, wenn
+  - eine Menge > 0 ist, oder
+  - ein Preisfeld ungültig ist (zum Beispiel leer oder „abc“), oder
+  - ein gültiges Preisfeld laut `price_in_cents()` einen anderen Betrag als den
+    gespeicherten ergibt.
+  - Deshalb gelten „4“, „4.0“ und „4.00“ bei gespeicherten €4.00 **nicht** als
+    Änderung.
+- **„Start trading day“ ist gesperrt** (`disabled`), solange ungespeicherte
+  Änderungen vorliegen. Daneben steht: *„Apply or discard your changes before
+  trading.“* So wird nie mit alten Preisen gehandelt, weil jemand das Anwenden
+  vergessen hat.
+- **Knopf „Discard changes“** setzt alle Entwurfswerte auf den gespeicherten Stand
+  zurück, ohne etwas zu schreiben. Er ist nur aktiv, wenn ungespeicherte
+  Änderungen vorliegen.
+- **Tageswechsel in einem anderen Fenster:**
+  - `app.py` merkt sich im Session State, zu welchem Spiel und Tag die
+    Entwurfswerte gehören.
+  - Lädt die Seite einen anderen Tag, weil zum Beispiel Fenster A den Tag
+    abgeschlossen hat, werden die Entwurfswerte in Fenster B zurückgesetzt.
+  - Lagen ungespeicherte Änderungen vor, erscheint *„Your plan was discarded
+    because the trading day changed.“*
+  - Klickt B „Apply …“ mit dem veralteten Tag, lehnt `apply_plan` mit „game has
+    changed“ ab. Danach wird der Plan ebenfalls verworfen und gemeldet. So
+    werden alte Eingaben nie am nächsten Tag angewendet.
 - **Linkwechsel:** `GAME_SESSION_KEYS` umfasst zusätzlich die Mengen- und Preisfelder.
 - **Datenbank:** `db.buy` und `db.set_price` bleiben für Tests und als
   Einzelaktionen erhalten. `apply_plan` verwendet dieselben Prüfungen. Gesperrte
   Datenbank → `DatabaseBusy` wie bisher, nichts gespeichert.
 
-**Nicht enthalten:** Rückgängig machen nach dem Anwenden, Speichern von
-Teilplänen, automatischer Handel.
+**Nicht enthalten:** Rückgängig machen *nach* dem Anwenden (bereits gekaufte Ware
+bleibt gekauft), Speichern von Entwürfen in der Datenbank, automatischer Handel.
 
 ### Done when (E1)
 
@@ -114,6 +151,15 @@ Preise €4.00 / €1.00 / €2.00), sofern nicht anders angegeben.
 | U12 | `apply_plan` mit veraltetem Tag; nach Tag 5 | „game has changed“ bzw. „complete“, nichts gespeichert |
 | U13 | `apply_plan` bei gesperrter Datenbank | `DatabaseBusy`, nichts gespeichert. Nach der Freigabe genau einmal erfolgreich |
 | U14 | Strategie aus Test 23 vollständig über die neue Oberfläche | Kasse nach den Tagen €152.50 / €235.00 / €317.50 / €366.50 / €419.00. Overall gain / loss €319.00, Differenz +€90.00 |
+| U15 | Coffee-Preisfeld leeren, dann Water Buy 3 eingeben | Coffee-Preisfeld bleibt leer, Vorschau Coffee „Invalid price“, Handel gesperrt. „Apply …“ wird abgelehnt, nichts gespeichert, Eingaben bleiben (leer, Water 3) |
+| U16 | Spiel B vorhanden; `apply_plan` mit ungültigem (`"abc"`) und mit unbekanntem, formal gültigem Token | „not valid“, alle Tabellen unverändert. Beim ungültigen Format wird die Datenbank nicht geöffnet |
+| U17 | Spiele A und B mit verschiedenen Beständen und Preisen; `apply_plan` in A: Coffee 3, Water 2, Preise 5.00 / 1.50 / 2.00 | A: Kasse €93.00, Lager 3/2/0, Preise €5.00 / €1.50 / €2.00. B: alle Zeilen unverändert |
+| U18 | A an Tag 1; ein Trigger bricht das Update des **zweiten** Produkts (Water) ab; `apply_plan` Coffee 3, Water 2 | Fehler wird weitergegeben, **vollständiger Rollback**: Kasse €100.00, Lager 0/0/0, Preise unverändert, obwohl Coffee schon geändert war |
+| U19 | `apply_plan` ohne `"Müsliriegel"`, mit zusätzlichem `"Tee"` bzw. mit `"Tee"` statt `"Wasser"` (jeweils in `quantities` oder `prices`) | `ValueError` „does not match the kiosk catalogue“, kein `KeyError`, nichts gespeichert |
+| U20 | Zwei Sitzungen desselben Spiels an Tag 1. Fenster B: Coffee Buy 5, Preis 8.00, nicht angewendet. Fenster A schließt Tag 1 ab, dann B neu laden | B zeigt Tag 2, Buy 0, gespeicherte Preise und „Your plan was discarded because the trading day changed.“. Nichts gekauft |
+| U21 | Wie U20, aber B klickt „Apply …“ statt neu zu laden | Ablehnung „game has changed“, keine Käufe, Plan verworfen und gemeldet, B zeigt Tag 2 |
+| U22 | Coffee-Preisfeld „4“, dann „4.0“ eingeben (gespeichert €4.00) | Keine ungespeicherte Änderung, Handel freigegeben, „Apply …“ meldet „Nothing to apply.“ |
+| U23 | Coffee Buy 5 und Water-Preis 9.99 eingeben, dann „Discard changes“ | Buy 0, Water-Preis 1.00, nichts gespeichert, Handel freigegeben, „Discard changes“ wieder inaktiv |
 
 - Bestehende Oberflächentests, die „Buy“ und das Speichern per Enter verwenden,
   werden auf den Tagesplan umgestellt. Ihre Sollwerte bleiben gleich.
@@ -143,8 +189,8 @@ Ereignisse bekommen. Manipulationssicher wird die Rangliste dadurch nicht (siehe
    - Ein abgeschlossenes Spiel kann sich nicht mehr ändern, das Ergebnis bleibt
      also gültig.
    - Kein Wert aus dem Browser fließt ins Ergebnis ein, nur der Spitzname.
-3. **Höchstens ein Eintrag pro Spiel**, gesichert über den Primärschlüssel
-   `game_id`. Ein zweites Veröffentlichen wird abgelehnt mit *„This game is
+3. **Höchstens ein Eintrag pro Spiel**, gesichert über `UNIQUE` auf `game_id`.
+   Der Primärschlüssel ist `entry_id`. Ein zweites Veröffentlichen wird abgelehnt mit *„This game is
    already on the leaderboard.“*
    - Ohne Konten lässt sich **ein Eintrag pro Person nicht garantieren**.
 4. **Spitzname:**
@@ -209,6 +255,8 @@ Spiele ohne Einkauf enden bei €0.00.
 | L12 | Datenbank im P4-Schema mit einem Spiel | `initialize()` | Tabelle `leaderboard` ist angelegt, Spiel und Verkäufe sind unverändert |
 | L13 | A fertig, Datenbank gesperrt | Veröffentlichen | `DatabaseBusy`, nichts gespeichert. Nach der Freigabe genau einmal erfolgreich |
 | L14 | Leere Rangliste | Startseite | „No results published yet.“ für beide Szenarien |
+| L15 | A veröffentlicht, Datenbank gesperrt | „Remove my result“ | `DatabaseBusy`, Eintrag bleibt. Nach der Freigabe genau einmal entfernt |
+| L16 | A veröffentlicht; Trigger bricht `DELETE FROM games` ab | Spiel A löschen | Fehler wird weitergegeben, **vollständiger Rollback**: Spiel, Verkäufe und Ranglisteneintrag von A bleiben erhalten |
 
 ---
 
