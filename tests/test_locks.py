@@ -143,7 +143,9 @@ def test_app_page_load_offers_try_again(path):
     with locked(path, "EXCLUSIVE"):
         page.run()
         assert not page.exception
-        assert "busy right now" in page.warning[0].value
+        assert page.warning[0].value == (
+            "The game is busy right now and could not be loaded. Please try again in a moment.")
+        assert "Nothing was changed" not in page.warning[0].value
         assert [b.label for b in page.button] == ["Try again"]
     click(page, "Try again")
     assert page.metric[0].value == "€100.00"
@@ -162,7 +164,8 @@ def test_app_reports_a_lock_while_loading_the_game(path, monkeypatch):
     page.query_params["game"] = token
     page.run()
     assert not page.exception
-    assert "busy right now" in page.warning[0].value
+    assert "could not be loaded" in page.warning[0].value
+    assert "Nothing was changed" not in page.warning[0].value
     assert [b.label for b in page.button] == ["Try again"]
     assert not page.error
 
@@ -183,3 +186,26 @@ def test_app_does_not_retry_a_busy_purchase(path, monkeypatch):
     assert len(calls) == 1
     assert "busy right now" in page.error[0].value
     assert db.load(path, token)[0]["cash"] == 10000
+
+
+def test_busy_delete_keeps_the_link_and_deletes_once_after_release(path):
+    token = db.create_game(path, "exam_week")
+    db.buy(path, token, 1, "Kaffee", 3)
+    before = all_rows(path)
+    page = AppTest.from_file(str(APP), default_timeout=60)
+    page.query_params["game"] = token
+    page.run()
+    click(page, "Delete this game")
+    with locked(path):
+        click(page, "Delete game")
+    assert page.error[0].value == db.BUSY
+    assert page.query_params["game"] == token
+    assert page.metric[0].value == "€94.00"
+    assert [b.label for b in page.button][-2:] == ["Delete this game", "Start another game"]
+    assert all_rows(path) == before
+    click(page, "Delete this game")
+    click(page, "Delete game")
+    assert page.success[0].value == "Game deleted."
+    assert "game" not in page.query_params
+    with pytest.raises(ValueError, match="not valid"):
+        db.load(path, token)

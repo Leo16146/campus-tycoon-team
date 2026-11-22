@@ -32,7 +32,8 @@ lassen. Alle sichtbaren Texte der App sind auf Englisch. Eurobeträge erscheinen
   nie Zugriff. Gespeichert wird nur der SHA-256-Hash, nie das Token selbst. Tokens
   erscheinen nicht in Meldungen, Logs oder Beispieldaten.
 - **Transaktionen:** Datenbankzugriffe laufen über `db.transaction()`. Nur
-  SQLite-Sperrfehler werden zu `DatabaseBusy`; andere Datenbankfehler werden nicht
+  SQLite-Sperrfehler werden zu `DatabaseBusy` (Aktionen: Meldung `db.BUSY`, Link bleibt
+  erhalten; Laden der Seite: `BUSY_LOADING` mit „Try again“); andere Datenbankfehler werden nicht
   abgefangen. Abgelehnte oder gesperrte Aktionen ändern nichts und werden nicht
   automatisch wiederholt.
 - **Speicherung:** SQLite in `campus_week.sqlite3` (über `CAMPUS_TYCOON_DB` änderbar).

@@ -197,7 +197,7 @@ Diese Grenzen kommen in README und Repo-Walkthrough:
 - **Spiel:** Das Spiel ist deterministisch, alles ist bekannt. Wer die Regel „3 × min(oben, Bestand) > min(unten, Bestand)“ verstanden hat, kann es lösen. Bei ausreichendem Bestand wird daraus „3 × oben > unten“. Das ist als Lernspiel gewollt.
 - **Mehrere Nutzerinnen:** Mehrere Personen können gleichzeitig getrennte Spiele spielen. Es gibt keinen gemeinsamen Wettbewerb.
 - **Ressourcen:** Die Zahl der Spiele ist nicht begrenzt, es gibt kein automatisches Aufräumen.
-- **Gleichzeitige Zugriffe:** SQLite erlaubt jeweils nur einen Schreibvorgang. Ist die Sperre nicht innerhalb von 5 Sekunden frei, wird die Aktion nicht ausgeführt (`DatabaseBusy`), und die App bittet darum, es erneut zu versuchen. Es gibt keine automatische Wiederholung. Andere Datenbankfehler werden nicht abgefangen (P4, `tests/test_locks.py`).
+- **Gleichzeitige Zugriffe:** SQLite erlaubt jeweils nur einen Schreibvorgang. Ist die Sperre nicht innerhalb von 5 Sekunden frei, wird die Aktion nicht ausgeführt (`DatabaseBusy`). Die App meldet „Nothing was changed“ und bittet darum, es erneut zu versuchen; ein gesperrtes Löschen behält den Spiel-Link. Ein gesperrtes Laden der Seite meldet stattdessen „could not be loaded“ und bietet „Try again“. Es gibt keine automatische Wiederholung. Andere Datenbankfehler werden nicht abgefangen (P4, `tests/test_locks.py`).
 - **Wie es sich ändern könnte:** dauerhafte Speicherung durch Austausch von `db.py` (zum Beispiel Postgres); Identität über `st.login`; Rangliste je Szenario auf dieser Grundlage.
 
 ## Technischer Versuch P0 (Ergebnis)

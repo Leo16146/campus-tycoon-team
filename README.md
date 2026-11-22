@@ -102,9 +102,13 @@ Git. The app needs no secrets or API keys.
   files persist, so games can disappear, for example after a restart. The app says
   so on every game screen. A lost game shows the same message as an invalid link.
 - **Busy database.** If another player is writing at the same moment and the lock
-  is not free within 5 seconds, the action is not carried out. The app shows
-  *"The game is busy right now. Nothing was changed. Please try again in a
-  moment."* Actions are never repeated automatically.
+  is not free within 5 seconds, nothing is repeated automatically:
+  - A busy **action** (buy, set price, trade, delete, start game) is not carried
+    out. The app shows *"The game is busy right now. Nothing was changed. Please
+    try again in a moment."* and stays on the same game, so a failed delete keeps
+    the game link.
+  - A busy **page load** shows *"The game is busy right now and could not be
+    loaded. Please try again in a moment."* and a *Try again* button.
 
 ## Known limits
 
@@ -133,7 +137,7 @@ Git. The app needs no secrets or API keys.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 99 tests, all passing on 22.11.2026):
+**Automated** (`uv run pytest`, 100 tests, all passing on 22.11.2026):
 
 | File | What it covers |
 |---|---|
@@ -141,7 +145,7 @@ Git. The app needs no secrets or API keys.
 | `tests/test_kiosk.py` | Purchases, exact cash, rejected quantities and prices, stale day, unknown product, rollback, finished game |
 | `tests/test_scenarios.py` | Both event tables against the specification, price tiers, scarce stock, settlement with events, today's event in the UI |
 | `tests/test_baseline.py` | Baseline (€229.00 / €184.00), full five-day games (€319.00 / €270.00), results above and below the baseline, budget rule |
-| `tests/test_locks.py` | Busy database: message instead of crash, no partial changes, success once after release, no automatic retry, other errors not hidden |
+| `tests/test_locks.py` | Busy database: message instead of crash, no partial changes, success once after release, no automatic retry, busy delete keeps the link, separate message for page loads, other errors not hidden |
 | `tests/test_app.py` | Start page, invalid links, new session via link, two windows, switching links, delete with confirmation, final results |
 
 The expected values are computed by hand in `specs/campus-week.md`, not by the
