@@ -251,3 +251,20 @@ def test_publish_and_remove_through_the_app(path):
     click(page, "Remove my result")
     assert rows(path) == []
     assert [b.label for b in page.button][0] == "Publish my result"
+
+
+def test_busy_leaderboard_does_not_hide_the_rest_of_the_final_screen(path, monkeypatch):
+    token = play(path, "exam_week", WINNING_PLAN)
+
+    def busy(*args, **kwargs):
+        raise db.DatabaseBusy(db.BUSY)
+
+    monkeypatch.setattr(db, "my_entry", busy)
+    monkeypatch.setattr(db, "leaderboard", busy)
+    page = open_app(token)
+    assert not page.exception
+    captions = [c.value for c in page.caption]
+    assert "Your leaderboard entry could not be loaded right now. Please reload the page in a moment." in captions
+    assert "The leaderboard is busy right now. Please reload the page in a moment." in captions
+    assert [b.label for b in page.button][-2:] == ["Delete this game", "Start another game"]
+    assert page.expander[0].label == "Day 5"

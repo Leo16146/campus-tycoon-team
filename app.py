@@ -249,6 +249,25 @@ def show_leaderboard(scenario):
              border="horizontal", hide_index=True)
 
 
+def show_my_entry(token):
+    """Publish form or own rank. A busy database only affects this part of the page."""
+    try:
+        entry = db.my_entry(DATABASE, token)
+    except db.DatabaseBusy:
+        st.caption("Your leaderboard entry could not be loaded right now. "
+                   "Please reload the page in a moment.")
+        return
+    if entry is None:
+        st.text_input("Nickname for the leaderboard", max_chars=20, key="nickname",
+                      help="3–20 letters, digits, spaces, _ or -. Shown publicly with your result.")
+        st.button("Publish my result", icon=":material/emoji_events:", on_click=publish,
+                  args=(token,))
+    else:
+        st.success(f"Your rank: {entry['rank']} of {entry['total']} (as {entry['nickname']})")
+        st.button("Remove my result", icon=":material/remove_circle:", on_click=withdraw,
+                  args=(token,))
+
+
 def delete_current_game(token):
     """Leave the game only if it was deleted; otherwise keep its link in the URL."""
     st.session_state.confirm_delete = False
@@ -425,19 +444,7 @@ else:
 
     with st.container(border=True):
         st.subheader(f"Leaderboard: {SCENARIOS[game['scenario']]}")
-        try:
-            entry = db.my_entry(DATABASE, token)
-        except db.DatabaseBusy:
-            stop_when_busy()
-        if entry is None:
-            st.text_input("Nickname for the leaderboard", max_chars=20, key="nickname",
-                          help="3–20 letters, digits, spaces, _ or -. Shown publicly with your result.")
-            st.button("Publish my result", icon=":material/emoji_events:", on_click=publish,
-                      args=(token,))
-        else:
-            st.success(f"Your rank: {entry['rank']} of {entry['total']} (as {entry['nickname']})")
-            st.button("Remove my result", icon=":material/remove_circle:", on_click=withdraw,
-                      args=(token,))
+        show_my_entry(token)
         show_leaderboard(game["scenario"])
         st.caption(LEADERBOARD_NOTE)
 
