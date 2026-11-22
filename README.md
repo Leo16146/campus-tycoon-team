@@ -135,7 +135,9 @@ Git. The app needs no secrets or API keys.
 ## How it could change
 
 - **Persistent storage:** replace SQLite with a hosted database such as Postgres.
-  Only `db.py` would change.
+  Most storage changes would be concentrated in `db.py`; the dependencies, the
+  configuration (a connection secret on the host) and the storage tests would
+  also have to change.
 - **Accounts:** use `st.login` to identify players, still with one game per
   authorised owner.
 - **Leaderboard:** compare results per scenario, which is fair because all players
@@ -145,7 +147,8 @@ Git. The app needs no secrets or API keys.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 132 tests, all passing on 22.11.2026):
+**Automated** (`uv run pytest`, 132 tests). All pass on `main` @ `5471fe0`, run in a
+fresh copy on 22.11.2026:
 
 | File | What it covers |
 |---|---|
