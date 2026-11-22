@@ -220,7 +220,10 @@ def test_final_result_values_remaining_stock_at_cost(path):
     db.trade(path, token, 5)
     page = open_app(token)
     assert not page.exception
-    assert [m.value for m in page.metric[-3:]] == ["€118.00", "€4.00", "€22.00"]
+    # Looked up by label: the baseline comparison adds three more metrics below.
+    values = {m.label: m.value for m in page.metric}
+    assert [values[label] for label in ("Final cash", "Remaining stock at cost",
+                                        "Overall gain / loss")] == ["€118.00", "€4.00", "€22.00"]
     assert labels(page) == ["Delete this game", "Start another game"]
 
 
