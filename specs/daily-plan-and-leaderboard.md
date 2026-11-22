@@ -122,6 +122,20 @@ Die Startseite erklärt bisher weder das Ziel noch die Bewertung.
   - Klickt B „Apply …“ mit dem veralteten Tag, lehnt `apply_plan` mit „game has
     changed“ ab. Danach wird der Plan ebenfalls verworfen und gemeldet. So
     werden alte Eingaben nie am nächsten Tag angewendet.
+- **Änderung in einem anderen Fenster am selben Tag** (Codex-Review zu `b4288b0`):
+  - Jedes Fenster merkt sich den Schnappschuss, den es angezeigt hat
+    (`db.snapshot`): Tag, Kasse, Lager und Preis je Produkt.
+  - `apply_plan` und `trade` vergleichen ihn **in derselben Transaktion** mit dem
+    gespeicherten Stand (`check_unchanged`). Bei einer Abweichung lehnen sie ab
+    mit *„This game was changed in another window. Nothing was changed here. The
+    current state is now shown.“*
+  - Das Fenster lädt danach den aktuellen Stand und setzt den Entwurf zurück.
+  - Wich der Entwurf von dem Stand ab, für den er gemacht wurde, erscheint
+    *„Your plan was discarded because the game was changed in another window.“*
+    Bei einem Tageswechsel erscheint wie bisher die Tagesmeldung.
+  - Ein veralteter Plan kann so keine Preise eines anderen Fensters
+    zurücksetzen. Ein veraltetes Fenster handelt nie mit Preisen, die es nicht
+    angezeigt hat.
 - **Linkwechsel:** `GAME_SESSION_KEYS` umfasst zusätzlich die Mengen- und Preisfelder.
 - **Datenbank:** `db.buy` und `db.set_price` bleiben für Tests und als
   Einzelaktionen erhalten. `apply_plan` verwendet dieselben Prüfungen. Gesperrte
@@ -160,6 +174,9 @@ Preise €4.00 / €1.00 / €2.00), sofern nicht anders angegeben.
 | U21 | Wie U20, aber B klickt „Apply …“ statt neu zu laden | Ablehnung „game has changed“, keine Käufe, Plan verworfen und gemeldet, B zeigt Tag 2 |
 | U22 | Coffee-Preisfeld „4“, dann „4.0“ eingeben (gespeichert €4.00) | Keine ungespeicherte Änderung, Handel freigegeben, „Apply …“ meldet „Nothing to apply.“ |
 | U23 | Coffee Buy 5 und Water-Preis 9.99 eingeben, dann „Discard changes“ | Buy 0, Water-Preis 1.00, nichts gespeichert, Handel freigegeben, „Discard changes“ wieder inaktiv |
+| U24 | Zwei Fenster an Tag 1. B: Buy Coffee 5 (nicht angewendet). A: Coffee-Preis 8.00 anwenden. Dann B „Apply …“ | Ablehnung mit der Meldung „changed in another window“ und „plan was discarded … another window“. Coffee bleibt €8.00, Lager 0/0/0, Kasse €100.00. B zeigt Buy 0 und 8.00 |
+| U25 | Zwei Fenster an Tag 1, B unverändert. A: Buy Coffee 10, Preis 8.00 anwenden. Dann B „Start trading day“ | Ablehnung „changed in another window“, **keine** Verwerfungsmeldung (B hatte nichts geändert), Tag 1, keine Verkäufe. B zeigt €80.00 und 8.00. Danach handelt B normal: 5 Coffee zu €8.00, Kasse €120.00, Tag 2 |
+| U26 | `apply_plan` und `trade` mit einem Schnappschuss von vor einer Preisänderung | Beide lehnen ab, nichts geändert. Mit dem aktuellen Schnappschuss gelingt `apply_plan` |
 
 - Bestehende Oberflächentests, die „Buy“ und das Speichern per Enter verwenden,
   werden auf den Tagesplan umgestellt. Ihre Sollwerte bleiben gleich.

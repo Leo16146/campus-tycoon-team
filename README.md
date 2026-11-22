@@ -38,6 +38,9 @@ branch `p0-token-spike`). It is not the finished app.
   *Apply purchases and prices* saves everything together, or nothing if one input
   is invalid or the total is more than your cash. *Discard changes* restores the
   saved plan. *Start trading day* stays disabled while changes are not applied.
+  If another window changed the game in the meantime, applying or trading is
+  rejected and the current state is shown, so an old window never undoes newer
+  changes.
   Unsold stock stays in the inventory and all amounts are whole cents.
 - **How to play** on the start page explains the goal, the daily steps and the score.
 - **Final comparison** after day 5: your overall gain / loss next to the baseline
@@ -142,7 +145,7 @@ Git. The app needs no secrets or API keys.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 129 tests, all passing on 22.11.2026):
+**Automated** (`uv run pytest`, 132 tests, all passing on 22.11.2026):
 
 | File | What it covers |
 |---|---|
@@ -151,7 +154,7 @@ Git. The app needs no secrets or API keys.
 | `tests/test_scenarios.py` | Both event tables against the specification, price tiers, scarce stock, settlement with events, today's event in the UI |
 | `tests/test_baseline.py` | Baseline (€229.00 / €184.00), full five-day games (€319.00 / €270.00), results above and below the baseline, budget rule |
 | `tests/test_locks.py` | Busy database: message instead of crash, no partial changes, success once after release, no automatic retry, busy delete keeps the link, separate message for page loads, other errors not hidden |
-| `tests/test_daily_plan.py` | Daily plan: preview, atomic apply, rejected inputs kept for correction, total above cash, catalogue check, rollback, other games unchanged, day finished in another window, numeric price comparison, discard, full game through the UI |
+| `tests/test_daily_plan.py` | Daily plan: preview, atomic apply, rejected inputs kept for correction, total above cash, catalogue check, rollback, other games unchanged, day finished or game changed in another window, numeric price comparison, discard, full game through the UI |
 | `tests/test_app.py` | Start page, invalid links, new session via link, two windows, switching links, delete with confirmation, final results |
 
 The expected values are computed by hand in `specs/campus-week.md`, not by the

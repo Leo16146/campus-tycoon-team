@@ -14,6 +14,8 @@ INVALID_LINK = ("This game link is not valid or the game is no longer available.
                 "Games are stored temporarily and may be removed.")
 RETIRED_SCENARIO = "This game uses a scenario that is no longer available."
 SOLO_SCHEMA = "This database uses the solo schema. Set CAMPUS_TYCOON_DB to a new file."
+STALE = ("This game was changed in another window. Nothing was changed here. "
+         "The current state is now shown.")
 BUSY = "The game is busy right now. Nothing was changed. Please try again in a moment."
 LOCK_TIMEOUT = 5  # seconds SQLite waits for another connection to release its lock
 
@@ -136,6 +138,22 @@ def load(path, token):
         return state, products, history
 
 
+def snapshot(game, products):
+    """What a window has seen: day, cash, and stock and price of every product."""
+    return (game["day"], game["cash"],
+            tuple((p["name"], p["stock"], p["price"]) for p in products))
+
+
+def check_unchanged(conn, game, seen):
+    """Reject an action from a window that shows an older state of the same day."""
+    if seen is None:
+        return
+    products = conn.execute("""SELECT name, stock, price FROM products
+                               WHERE game_id = ? ORDER BY position""", (game["id"],)).fetchall()
+    if snapshot(game, products) != seen:
+        raise ValueError(STALE)
+
+
 def current_game(conn, token, expected_day):
     game = playable_game(conn, token)
     if game["day"] != expected_day:
@@ -182,11 +200,15 @@ def checked_plan(quantities, prices):
     return {name: price_in_cents(text) for name, text in prices.items()}
 
 
-def apply_plan(path, token, day, quantities, prices):
-    """Buy all planned stock and save all prices together, or change nothing."""
+def apply_plan(path, token, day, quantities, prices, seen=None):
+    """Buy all planned stock and save all prices together, or change nothing.
+
+    seen is the snapshot the window showed; the app always passes it.
+    """
     check_token(token)
     with transaction(path) as conn:
         game = current_game(conn, token, day)
+        check_unchanged(conn, game, seen)
         cents = checked_plan(quantities, prices)
         products = conn.execute("SELECT name, cost FROM products WHERE game_id = ? ORDER BY position",
                                 (game["id"],)).fetchall()
@@ -201,10 +223,11 @@ def apply_plan(path, token, day, quantities, prices):
                          (quantities[name], cents[name], game["id"], name))
 
 
-def trade(path, token, day):
+def trade(path, token, day, seen=None):
     check_token(token)
     with transaction(path) as conn:
         game = current_game(conn, token, day)
+        check_unchanged(conn, game, seen)
         _, tiers = todays_event(game["scenario"], day)
         total_revenue = 0
         products = conn.execute("SELECT * FROM products WHERE game_id = ? ORDER BY position",

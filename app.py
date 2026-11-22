@@ -112,14 +112,20 @@ def fill_draft(products):
             st.session_state[f"price_{name}"] = price_text(product["price"])
 
 
-def follow_trading_day(token, day, saved_prices):
-    """Discard a plan that was made for another trading day, for example after
-    another window finished the day."""
-    owner = [db.token_hash(token), day]
+def follow_saved_state(token, seen):
+    """Discard a plan that was made for an older saved state, for example after
+    another window finished the day or applied its own plan. A message appears
+    only if the plan differed from the state it was made for."""
+    owner = (db.token_hash(token), seen)
     previous = st.session_state.get("draft_of")
     if previous is not None and previous != owner:
-        if draft_changed(saved_prices):
-            notify("warning", "Your plan was discarded because the trading day changed.")
+        old_day, _, old_products = previous[1]
+        if draft_changed({name: price for name, _, price in old_products}):
+            if old_day != seen[0]:
+                notify("warning", "Your plan was discarded because the trading day changed.")
+            else:
+                notify("warning", "Your plan was discarded because the game was changed "
+                                  "in another window.")
         clear_draft()
     st.session_state.draft_of = owner
 
@@ -161,7 +167,7 @@ def forget_other_game(token):
         st.session_state.active_game = active
 
 
-def apply_plan(token, day, saved_prices):
+def apply_plan(token, day, saved_prices, seen):
     """Apply all purchases and prices together. After a rejection the inputs stay."""
     if not draft_changed(saved_prices):
         notify("info", "Nothing to apply.")
@@ -169,7 +175,7 @@ def apply_plan(token, day, saved_prices):
     quantities = {name: st.session_state[f"buy_{name}"] for name in NAMES}
     prices = {name: st.session_state[f"price_{name}"] for name in NAMES}
     try:
-        db.apply_plan(DATABASE, token, day, quantities, prices)
+        db.apply_plan(DATABASE, token, day, quantities, prices, seen)
     except USER_ERRORS as error:
         notify("error", str(error))
         return
@@ -177,12 +183,12 @@ def apply_plan(token, day, saved_prices):
     clear_draft()
 
 
-def trade_day(token, day, saved_prices):
+def trade_day(token, day, saved_prices, seen):
     if draft_changed(saved_prices):
         notify("error", "Apply or discard your changes before trading.")
         return
     try:
-        db.trade(DATABASE, token, day)
+        db.trade(DATABASE, token, day, seen)
     except USER_ERRORS as error:
         notify("error", str(error))
         return
@@ -261,7 +267,8 @@ except ValueError as error:
 
 day = game["day"]
 saved_prices = {p["name"]: p["price"] for p in products}
-follow_trading_day(token, day, saved_prices)
+seen = db.snapshot(game, products)
+follow_saved_state(token, seen)
 st.caption(f"Scenario: {SCENARIOS[game['scenario']]}")
 st.info("Bookmark this page to continue later. Games are stored temporarily on the server "
         "and may be removed, for example after a restart.")
@@ -308,13 +315,13 @@ if day <= 5:
     changed = draft_changed(saved_prices)
     apply_col, discard_col = st.columns(2)
     apply_col.button("Apply purchases and prices", on_click=apply_plan,
-                     args=(token, day, saved_prices))
+                     args=(token, day, saved_prices, seen))
     discard_col.button("Discard changes", on_click=clear_draft, disabled=not changed)
     st.subheader("Trading")
     st.write("Today's demand depends on the event shown above and on each selling price. "
              "Sales are limited to the stock on hand. Unsold stock stays in the inventory.")
     st.button("Start trading day", type="primary", on_click=trade_day,
-              args=(token, day, saved_prices), disabled=changed)
+              args=(token, day, saved_prices, seen), disabled=changed)
     if changed:
         st.caption("Apply or discard your changes before trading.")
 

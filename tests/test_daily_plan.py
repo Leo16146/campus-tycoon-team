@@ -355,3 +355,53 @@ def test_u23_discard_restores_the_saved_plan(path):
     assert saved(path, token) == (1, 10000, [0, 0, 0], [400, 100, 200])
     assert not button(page, "Start trading day").disabled
     assert button(page, "Discard changes").disabled
+
+
+# --- Changes from another window on the same day -------------------------------
+
+def test_u24_stale_plan_on_the_same_day_does_not_undo_another_window(path):
+    token, window_b = new_game(path)
+    plan(window_b, "Kaffee", buy=5)
+    window_a = open_app(token)
+    plan(window_a, "Kaffee", price="8.00")
+    click(window_a, "Apply purchases and prices")
+    click(window_b, "Apply purchases and prices")
+    assert window_b.error[0].value == db.STALE
+    assert window_b.warning[0].value == ("Your plan was discarded because the game was "
+                                         "changed in another window.")
+    assert saved(path, token) == (1, 10000, [0, 0, 0], [800, 100, 200])
+    assert fields(window_b) == ([0, 0, 0], ["8.00", "1.00", "2.00"])
+
+
+def test_u25_stale_window_cannot_trade_with_prices_it_has_not_shown(path):
+    token, window_b = new_game(path)
+    window_a = open_app(token)
+    plan(window_a, "Kaffee", buy=10, price="8.00")
+    click(window_a, "Apply purchases and prices")
+    click(window_b, "Start trading day")
+    assert window_b.error[0].value == db.STALE
+    assert not window_b.warning
+    assert saved(path, token) == (1, 8000, [10, 0, 0], [800, 100, 200])
+    assert db.load(path, token)[2] == []
+    assert window_b.metric[0].value == "€80.00"
+    assert fields(window_b) == ([0, 0, 0], ["8.00", "1.00", "2.00"])
+    # Now window B shows the current state and can trade: 5 coffee sell at €8.00.
+    click(window_b, "Start trading day")
+    assert saved(path, token) == (2, 12000, [5, 0, 0], [800, 100, 200])
+
+
+def test_u26_database_rejects_an_outdated_snapshot(path):
+    token = db.create_game(path, "exam_week")
+    game, products, _ = db.load(path, token)
+    seen = db.snapshot(game, products)
+    db.set_price(path, token, 1, "Wasser", "1.50")
+    before = all_rows(path)
+    with pytest.raises(ValueError, match="changed in another window"):
+        db.apply_plan(path, token, 1, *full_plan([1, 0, 0]), seen=seen)
+    with pytest.raises(ValueError, match="changed in another window"):
+        db.trade(path, token, 1, seen=seen)
+    assert all_rows(path) == before
+    game, products, _ = db.load(path, token)
+    db.apply_plan(path, token, 1, *full_plan([1, 0, 0], dict(REFERENCE, Wasser="1.50")),
+                  seen=db.snapshot(game, products))
+    assert saved(path, token) == (1, 9800, [1, 0, 0], [400, 150, 200])
