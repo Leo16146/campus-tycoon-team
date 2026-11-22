@@ -159,19 +159,25 @@ keeps the rules testable with small numbers.
   same five events, so results are comparable and the tests are deterministic.
   There is no external service that can fail during the demo.
 - **Private links instead of passwords.** A random token from
-  `secrets.token_urlsafe(32)` cannot be guessed. Storing only its SHA-256 hash means
-  a copy of the database does not reveal working links. Own passwords would need
-  slow hashing, rate limits and password resets, and Streamlit loses
-  `st.session_state` on every reload. A slow hash is unnecessary for random
-  tokens, because they are not guessable like passwords.
+  `secrets.token_urlsafe(32)` has 256 random bits, so guessing one is
+  computationally infeasible. Storing only its SHA-256 hash means a copy of the
+  database does not reveal working links. A slow password hash is unnecessary
+  here, because the token is random and not chosen by a person. Own passwords
+  would need slow hashing, rate limits and password resets, and Streamlit loses
+  `st.session_state` on every reload.
 - **Authorisation in `db.py`, not in the interface.** Every function that reads or
   changes a game receives the token and works only on the rows of the game found
   for it. A game id from the browser never grants access.
-- **One transaction per action.** `transaction()` starts with `BEGIN IMMEDIATE`,
-  which takes SQLite's write lock. The block is committed at the end and rolled
-  back on any error, so a purchase or a trading day is saved completely or not at
-  all. If the lock is not free within 5 seconds, `DatabaseBusy` is raised and the
-  app asks the player to try again. Nothing is retried automatically.
+- **One transaction per action.** Every database access runs inside
+  `transaction()`:
+  - Writing actions (create, apply plan, buy, set price, trade, delete) start with
+    `BEGIN IMMEDIATE`, which takes SQLite's write lock at once.
+  - Reading (`load`, the table check in `initialize`) starts with a plain `BEGIN`
+    and only has to wait while another connection is committing.
+  - The block is committed at the end and rolled back on any error, so a purchase
+    or a trading day is saved completely or not at all.
+  - If a lock is not free within 5 seconds, `DatabaseBusy` is raised and the app
+    asks the player to try again. Nothing is retried automatically.
 - **Snapshots against outdated windows.** Each window remembers what it showed
   (`snapshot`: day, cash, stock and price per product). `apply_plan` and `trade`
   compare it with the saved state inside the transaction. So an old window cannot
