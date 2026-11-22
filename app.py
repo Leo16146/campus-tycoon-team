@@ -279,8 +279,8 @@ saved_prices = {p["name"]: p["price"] for p in products}
 seen = db.snapshot(game, products)
 follow_saved_state(token, seen)
 st.caption(f"Scenario: {SCENARIOS[game['scenario']]}")
-st.info("Bookmark this page to continue later. Games are stored temporarily on the server "
-        "and may be removed, for example after a restart.")
+st.caption("Bookmark this page to continue later. Games are stored temporarily on the server "
+           "and may be removed, for example after a restart.")
 left, right = st.columns(2)
 left.metric("Cash", euros(game["cash"]))
 right.metric("Trading day", f"{day} of 5" if day <= 5 else "Complete")
@@ -302,9 +302,9 @@ if day <= 5:
                "Demand at or below reference price": tiers[p["name"]][0],
                "Demand above reference price, up to and including twice it": tiers[p["name"]][1]}
               for p in products])
-    st.info("Above twice the reference price, demand is 0. "
-            "At twice the reference price, each unit earns three times as much gross profit "
-            "as at the reference price. Sales are limited to the stock on hand.")
+    st.caption("Above twice the reference price, demand is 0. At twice the reference price, "
+               "each unit earns three times as much gross profit as at the reference price. "
+               "Sales are limited to the stock on hand; unsold stock stays in the inventory.")
     st.subheader("Plan today")
     st.caption("Enter purchases and selling prices for all products, check the preview, "
                "then apply them together. Nothing is saved before you apply.")
@@ -326,11 +326,10 @@ if day <= 5:
     changed = draft_changed(saved_prices)
     apply_col, discard_col = st.columns(2)
     apply_col.button("Apply purchases and prices", on_click=apply_plan,
-                     args=(token, day, saved_prices, seen))
+                     args=(token, day, saved_prices, seen),
+                     type="primary" if changed else "secondary")
     discard_col.button("Discard changes", on_click=clear_draft, disabled=not changed)
     st.subheader("Trading")
-    st.write("Today's demand depends on the event shown above and on each selling price. "
-             "Sales are limited to the stock on hand. Unsold stock stays in the inventory.")
     st.button("Start trading day", type="primary", on_click=trade_day,
               args=(token, day, saved_prices, seen), disabled=changed)
     if changed:
