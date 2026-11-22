@@ -278,7 +278,7 @@ with `docs/acceptance-checklist.md`.
 separate links keep separate data and invalid links are rejected. Whether data
 survived a reboot was not clearly recorded.
 
-**Local browser check** (22.11.2026, by Claude): the acceptance checklist was run
+**Local browser check** (22.11.2026, automated): the acceptance checklist was run
 automatically in Chromium (Playwright) against the app on `localhost` with an empty
 temporary database, at 1280 px and 375 px width. 30 of 30 checks passed, including
 the two-tab cases, the leaderboard, the CSV download and no horizontal scrolling on

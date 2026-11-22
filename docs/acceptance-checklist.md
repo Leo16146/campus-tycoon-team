@@ -4,7 +4,7 @@
 wurde dort aber noch nicht durchgespielt. Die P0-URL zeigt nur den Prototyp und zählt
 nicht.
 
-**Lokaler Browserdurchlauf (22.11.2026, Claude):** Die Schritte unten wurden
+**Lokaler Browserdurchlauf (22.11.2026, automatisiert):** Die Schritte unten wurden
 automatisiert in Chromium (Playwright) gegen die App auf `localhost` mit einer leeren
 temporären Datenbank geprüft, bei 1280 px und 375 px Breite: **30 von 30 Prüfungen
 bestanden.** Das ersetzt weder die Prüfung auf der deployten App noch den kurzen Test
