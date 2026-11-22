@@ -26,6 +26,14 @@ GAME_SESSION_KEYS = ("confirm_delete", "notices", "draft_of", "nickname") + DRAF
 LEADERBOARD_NOTE = ("The leaderboard is stored temporarily and may be reset when the "
                     "server restarts.")
 
+# One sentence per scenario, shown under the scenario choice.
+SCENARIO_DESCRIPTIONS = {
+    "exam_week": "Coffee is in high demand while students revise; on Open Day nobody "
+                 "pays more than the reference price.",
+    "heatwave": "Water sells best and coffee is weak; on Sports day the better price "
+                "differs by product.",
+}
+
 HOW_TO_PLAY = (
     "**How to play**\n\n"
     "- **Goal:** end the five trading days with the highest possible overall gain.\n"
@@ -259,7 +267,8 @@ def show_my_entry(token):
         return
     if entry is None:
         st.text_input("Nickname for the leaderboard", max_chars=20, key="nickname",
-                      help="3–20 letters, digits, spaces, _ or -. Shown publicly with your result.")
+                      help="3–20 letters (accents allowed), digits, spaces, _ or -. "
+                           "Shown publicly with your result.")
         st.button("Publish my result", icon=":material/emoji_events:", on_click=publish,
                   args=(token,))
     else:
@@ -320,7 +329,8 @@ if "game" not in st.query_params:
         st.write("Each game has its own private link. Anyone with the link can play or "
                  "delete the game.")
         scenario = st.radio("Scenario", list(SCENARIOS), format_func=SCENARIOS.__getitem__,
-                            key="scenario", horizontal=True)
+                            captions=[SCENARIO_DESCRIPTIONS[key] for key in SCENARIOS],
+                            key="scenario")
         st.button("Start game", type="primary", icon=":material/play_arrow:",
                   on_click=start_game, args=(scenario,))
     with st.container(border=True):
@@ -387,7 +397,8 @@ if day <= 5:
             quantity = buy_col.number_input(f"Buy {PRODUCT_LABELS[name]}", min_value=0, step=1,
                                             key=f"buy_{name}")
             text = price_col.text_input(f"{PRODUCT_LABELS[name]} selling price (€)",
-                                        max_chars=21, key=f"price_{name}")
+                                        max_chars=21, key=f"price_{name}",
+                                        help="Use a decimal point, e.g. 4.50. No comma, no € symbol.")
             st.caption(preview_text(product, quantity, text, tiers[name]))
             total += quantity * product["cost"]
         st.write(f"Total purchase cost: **{euros(total)}** · "

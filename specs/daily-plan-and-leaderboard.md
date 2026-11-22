@@ -212,8 +212,10 @@ Ereignisse bekommen. Manipulationssicher wird die Rangliste dadurch nicht (siehe
    - Ohne Konten lässt sich **ein Eintrag pro Person nicht garantieren**.
 4. **Spitzname:**
    - Leerzeichen am Anfang und Ende werden entfernt.
-   - Danach muss er `[A-Za-z0-9 _-]{3,20}` entsprechen, sonst *„Use 3–20
-     letters, digits, spaces, _ or -.“*
+   - Danach muss er 3–20 Zeichen lang sein und darf nur Buchstaben (auch mit
+     Akzenten, geprüft mit `str.isalnum()`), Ziffern, Leerzeichen, `_` und `-`
+     enthalten, sonst *„Use 3–20 letters (accents allowed), digits, spaces, _ or -.“*
+     (Nachtrag 22.11.2026: vorher nur A–Z, dadurch wurden Namen wie „José“ abgelehnt.)
    - Gleiche Spitznamen sind erlaubt.
    - Es gibt keinen Wortfilter.
 5. **Getrennte Ranglisten je Szenario**, sortiert nach Ergebnis absteigend, bei

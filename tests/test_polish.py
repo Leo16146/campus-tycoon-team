@@ -98,8 +98,9 @@ def test_summary_on_the_final_screen_and_only_for_its_own_game(path):
 # --- Product-specific errors --------------------------------------------------
 
 @pytest.mark.parametrize(("prices", "quantities", "message"), [
-    (dict(REFERENCE, Kaffee="abc"), (1, 0, 0),
-     "Coffee: Enter a positive euro amount with at most two decimal places."),
+    (dict(REFERENCE, Kaffee="abc"), (1, 0, 0), "Coffee: Use a decimal point and at most two decimals, e.g. 4.50 (no comma, no € symbol)."),
+    (dict(REFERENCE, Kaffee="4,00"), (1, 0, 0), "Coffee: Use a decimal point and at most two decimals, e.g. 4.50 (no comma, no € symbol)."),
+    (dict(REFERENCE, Kaffee="€4.00"), (1, 0, 0), "Coffee: Use a decimal point and at most two decimals, e.g. 4.50 (no comma, no € symbol)."),
     (dict(REFERENCE, Wasser="0"), (0, 0, 0), "Water: The selling price must be positive."),
     (dict(REFERENCE, Kaffee="", Wasser="x"), (0, 0, 0), "Coffee: "),
     (REFERENCE, (0, 0, -1), "Granola bar: Enter a whole number of 0 or more to buy."),
@@ -118,5 +119,7 @@ def test_the_app_shows_which_price_is_invalid(path):
     page = open_app(token)
     page.text_input(key="price_Müsliriegel").set_value("2.001").run()
     click(page, "Apply purchases and prices")
-    assert page.error[0].value == ("Granola bar: Enter a positive euro amount with at most "
-                                   "two decimal places.")
+    assert page.error[0].value == "Granola bar: Use a decimal point and at most two decimals, e.g. 4.50 (no comma, no € symbol)."
+    # The field itself explains the format before anything goes wrong.
+    assert page.text_input(key="price_Müsliriegel").help == (
+        "Use a decimal point, e.g. 4.50. No comma, no € symbol.")

@@ -43,7 +43,9 @@ branch `p0-token-spike`). It is not the finished app.
   rejected and the current state is shown, so an old window never undoes newer
   changes.
   Unsold stock stays in the inventory and all amounts are whole cents.
-- **How to play** on the start page explains the goal, the daily steps and the score.
+- **How to play** on the start page explains the goal, the daily steps and the score;
+  each scenario has a one-sentence description. Price fields explain the expected
+  format (decimal point, no comma, no € symbol).
 - **Day result right after trading:** units sold, revenue and gross profit of the
   last day next to the baseline's gross profit for that day. Error messages of the
   plan name the product, for example *"Coffee: The selling price must be positive."*
@@ -110,7 +112,7 @@ Git. The app needs no secrets or API keys.
 | `specs/campus-week.md` | Specification of the team extension with all expected values |
 | `docs/acceptance-checklist.md` | Manual check on the deployed app |
 | `docs/demo-script.md` | Plan for the live demo and questions for the walkthrough |
-| `.streamlit/config.toml` | Look of the app: warm coffee colours (every text/background pair has a contrast of at least 6:1), rounded cards, and only the viewer menu for visitors |
+| `.streamlit/config.toml` | Look of the app: warm coffee colours, rounded cards, and only the viewer menu for visitors. Measured contrast on the page: body text 17.9:1, captions 4.8:1 (WCAG AA needs 4.5:1), primary button 6.2:1 |
 | `.github/workflows/tests.yml` | Runs `uv sync --locked` and `uv run pytest` on GitHub for every push and pull request |
 | `specs/first-feature.md`, `docs/product-brief.html` | Documents of the original solo project |
 
@@ -250,7 +252,7 @@ keeps the rules testable with small numbers.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 166 tests, all passing on 22.11.2026). GitHub
+**Automated** (`uv run pytest`, 174 tests, all passing on 22.11.2026). GitHub
 Actions (`.github/workflows/tests.yml`) runs the same tests on every push and pull
 request:
 
@@ -263,7 +265,7 @@ request:
 | `tests/test_locks.py` | Busy database: message instead of crash, no partial changes, success once after release, no automatic retry, busy delete keeps the link, separate message for page loads, other errors not hidden |
 | `tests/test_daily_plan.py` | Daily plan: preview, atomic apply, rejected inputs kept for correction, total above cash, catalogue check, rollback, other games unchanged, day finished or game changed in another window, numeric price comparison, discard, full game through the UI |
 | `tests/test_polish.py` | Day result summary (also below the baseline and only for its own game), product names in plan errors |
-| `tests/test_leaderboard.py` | Leaderboard: only finished games, score from the saved game, one entry per game, nickname rules, shared ranks, withdraw, delete, schema upgrade, locks, no tokens on the page |
+| `tests/test_leaderboard.py` | Leaderboard: only finished games, score from the saved game, one entry per game, nickname rules (accents allowed, symbols rejected), shared ranks, withdraw, delete, schema upgrade, locks, no tokens on the page |
 | `tests/test_csv.py` | CSV content in euros, file name without token, only the own game |
 | `tests/test_app.py` | Start page, invalid links, new session via link, two windows, switching links, delete with confirmation, final results |
 
