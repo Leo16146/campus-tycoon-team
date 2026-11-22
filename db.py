@@ -5,11 +5,10 @@ import secrets
 import sqlite3
 from contextlib import closing
 
-from logic import (SCENARIOS, STARTING_CASH, price_in_cents, purchase_cost,
+from logic import (CATALOG, SCENARIOS, STARTING_CASH, price_in_cents, purchase_cost,
                    sales_for_product, todays_event)
 
 
-CATALOG = [("Kaffee", 200, 400), ("Wasser", 50, 100), ("Müsliriegel", 100, 200)]
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_-]{43}")
 INVALID_LINK = ("This game link is not valid or the game is no longer available. "
                 "Games are stored temporarily and may be removed.")

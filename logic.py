@@ -5,6 +5,9 @@ import re
 
 STARTING_CASH = 10000
 
+# Product name (SQLite key), unit cost and reference price in cents, in purchase order.
+CATALOG = [("Kaffee", 200, 400), ("Wasser", 50, 100), ("Müsliriegel", 100, 200)]
+
 TRADING_DAYS = 5
 
 # Scenario keys are stored with each game. Never redefine an existing key.
@@ -81,3 +84,41 @@ def sales_for_product(product, tiers):
     revenue = sold * product["price"]
     expense = sold * product["cost"]
     return sold, revenue, expense, revenue - expense
+
+
+def baseline_restock(stock, cash, tiers):
+    """Buy up to today's demand at the reference price, in catalogue order, as cash allows.
+
+    Returns the new stock, the remaining cash and the units bought per product.
+    """
+    stock = dict(stock)
+    bought = {}
+    for name, cost, _ in CATALOG:
+        wanted = max(0, tiers[name][0] - stock[name])
+        bought[name] = min(wanted, cash // cost)
+        stock[name] += bought[name]
+        cash -= bought[name] * cost
+    return stock, cash, bought
+
+
+def baseline_results(scenario):
+    """Play the baseline strategy: reference prices, restocked every day.
+
+    Uses the same events and sales rules as a player. Returns a list of
+    (gross profit, cash after trading) per day and the overall gain / loss.
+    """
+    stock = {name: 0 for name, _, _ in CATALOG}
+    cash = STARTING_CASH
+    days = []
+    for _, tiers in EVENTS[scenario]:
+        stock, cash, _ = baseline_restock(stock, cash, tiers)
+        gross_profit = 0
+        for name, cost, reference in CATALOG:
+            product = {"stock": stock[name], "price": reference, "reference": reference, "cost": cost}
+            sold, revenue, _, profit = sales_for_product(product, tiers[name])
+            stock[name] -= sold
+            cash += revenue
+            gross_profit += profit
+        days.append((gross_profit, cash))
+    remaining = [{"stock": stock[name], "cost": cost} for name, cost, _ in CATALOG]
+    return days, final_result(cash, remaining)[1]

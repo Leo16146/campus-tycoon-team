@@ -4,7 +4,8 @@ from pathlib import Path
 import streamlit as st
 
 import db
-from logic import SCENARIOS, demand, final_result, sales_for_product, todays_event
+from logic import (SCENARIOS, baseline_results, demand, final_result, sales_for_product,
+                   todays_event)
 
 
 DATABASE = Path(os.environ.get("CAMPUS_TYCOON_DB", Path(__file__).with_name("campus_week.sqlite3")))
@@ -21,6 +22,15 @@ def euros(cents):
     sign = "-" if cents < 0 else ""
     whole, fraction = divmod(abs(cents), 100)
     return f"{sign}€{whole:,}.{fraction:02d}"
+
+
+def signed_euros(cents):
+    """Show a difference with an explicit sign, for example +€90.00 or -€229.00."""
+    return ("+" if cents > 0 else "") + euros(cents)
+
+
+def daily_gross_profit(history, day):
+    return sum(row["profit"] for row in history if row["day"] == day)
 
 
 def sales_summary_row(label, sales):
@@ -203,6 +213,23 @@ else:
         summary.append(sales_summary_row(PRODUCT_LABELS[name], sales))
     summary.append(sales_summary_row("Total", history))
     st.table(summary)
+
+    baseline_days, baseline_result = baseline_results(game["scenario"])
+    st.subheader("Comparison with the baseline strategy")
+    you_col, baseline_col, difference_col = st.columns(3)
+    you_col.metric("Your overall gain / loss", euros(result))
+    baseline_col.metric("Baseline overall gain / loss", euros(baseline_result))
+    difference_col.metric("Difference (you − baseline)", signed_euros(result - baseline_result))
+    st.caption("Baseline strategy: a simple reference that keeps every selling price at the "
+               "reference price and restocks each day to the demand at that price. "
+               "It is not the best possible strategy.")
+    comparison = []
+    for number, (baseline_profit, _) in enumerate(baseline_days, start=1):
+        yours = daily_gross_profit(history, number)
+        comparison.append({"Day": number, "Your gross profit": euros(yours),
+                           "Baseline gross profit": euros(baseline_profit),
+                           "Difference": signed_euros(yours - baseline_profit)})
+    st.table(comparison)
 
 if history:
     st.subheader("Daily results")

@@ -1,6 +1,6 @@
 # Campus Week – Team-Erweiterung von Campus Tycoon
 
-**Stand:** 22.11.2026. P0 (technischer Versuch) ist abgeschlossen, siehe unten. P1 (Spieltrennung) ist auf `main`. P2 (Szenarien) ist auf dem Branch `p2-scenarios` umgesetzt und wartet auf das Review. P3–P4 sind noch nicht umgesetzt. Grundlage sind der Solo-Code auf `main` (Commit `c412e92`), [`specs/first-feature.md`](first-feature.md) und die [offizielle Projektseite](https://2477-introduction-programming.gitlab.io/wiki/team-project/), abgerufen am 22.11.2026.
+**Stand:** 22.11.2026. P0 (technischer Versuch) ist abgeschlossen, siehe unten. P1 (Spieltrennung) und P2 (Szenarien) sind auf `main`. P3 (Baseline und Abschlussvergleich) ist auf dem Branch `p3-baseline` umgesetzt und wartet auf das Review. P4 ist noch nicht umgesetzt. Grundlage sind der Solo-Code auf `main` (Commit `c412e92`), [`specs/first-feature.md`](first-feature.md) und die [offizielle Projektseite](https://2477-introduction-programming.gitlab.io/wiki/team-project/), abgerufen am 22.11.2026.
 
 Kennzeichnung in diesem Dokument:
 
