@@ -118,6 +118,84 @@ Git. The app needs no secrets or API keys.
   - A busy **page load** shows *"The game is busy right now and could not be
     loaded. Please try again in a moment."* and a *Try again* button.
 
+## How it works and why
+
+The detailed specifications in `specs/` are written in German. This section
+summarises the design in English.
+
+### What happens on a click
+
+Streamlit reruns `app.py` from top to bottom after every input or click. Take
+*Apply purchases and prices* as an example:
+
+1. The button's callback `apply_plan` in `app.py` collects the fields of today's
+   plan and calls `db.apply_plan`.
+2. `db.apply_plan` checks the token format (`check_token`) and opens one
+   transaction (`transaction`).
+3. Inside that transaction it:
+   - finds the game by the token's hash (`authorized_game`),
+   - checks the day (`current_game`) and that the window still shows the saved
+     state (`check_unchanged`),
+   - validates the plan (`checked_plan`, using `price_in_cents` from `logic.py`),
+   - checks the total against the cash,
+   - and only then writes all purchases and prices.
+4. Streamlit reruns `app.py`. It loads the game again with `db.load` and shows
+   the new state and the queued messages (`notify`, `show_notices`).
+
+`logic.py` holds the rules and never touches the database: the catalogue,
+`EVENTS`, `demand`, `sales_for_product`, `final_result` and the baseline. That
+keeps the rules testable with small numbers.
+
+### Why it is built this way
+
+- **Whole cents instead of floats.** €0.10 + €0.20 is not exactly €0.30 as a
+  float. All amounts are integers in cents and are only formatted as `€4.00` for
+  display.
+- **Demand tiers instead of factors.** With unit costs at half the reference price,
+  twice the reference price always earns more per unit. A plain factor would change
+  only the quantity, not the better price. Fixed tiers per event, for example
+  Open Day (14, 0), make the price decision depend on the day.
+- **Fixed scenarios instead of live data.** Every player of a scenario gets the
+  same five events, so results are comparable and the tests are deterministic.
+  There is no external service that can fail during the demo.
+- **Private links instead of passwords.** A random token from
+  `secrets.token_urlsafe(32)` cannot be guessed. Storing only its SHA-256 hash means
+  a copy of the database does not reveal working links. Own passwords would need
+  slow hashing, rate limits and password resets, and Streamlit loses
+  `st.session_state` on every reload. A slow hash is unnecessary for random
+  tokens, because they are not guessable like passwords.
+- **Authorisation in `db.py`, not in the interface.** Every function that reads or
+  changes a game receives the token and works only on the rows of the game found
+  for it. A game id from the browser never grants access.
+- **One transaction per action.** `transaction()` starts with `BEGIN IMMEDIATE`,
+  which takes SQLite's write lock. The block is committed at the end and rolled
+  back on any error, so a purchase or a trading day is saved completely or not at
+  all. If the lock is not free within 5 seconds, `DatabaseBusy` is raised and the
+  app asks the player to try again. Nothing is retried automatically.
+- **Snapshots against outdated windows.** Each window remembers what it showed
+  (`snapshot`: day, cash, stock and price per product). `apply_plan` and `trade`
+  compare it with the saved state inside the transaction. So an old window cannot
+  undo prices set in another window, or trade with prices it never displayed.
+- **No `st.form` for the daily plan.** A form sends its values only when it is
+  submitted, so the live preview of cost and expected sales would not update.
+  Normal widgets rerun the app on every input. Nothing is saved before *Apply*.
+  The draft is kept in `st.session_state`. `fill_draft`, `clear_draft` and
+  `follow_saved_state` decide when it is filled, reset or discarded.
+- **SQLite on Streamlit Community Cloud.** SQLite needs no secrets and no extra
+  service, and it is what the course apps use. The price is temporary storage. The
+  app says so on every game screen, and a lost game shows a clear message instead
+  of an error.
+
+### What the tests cover and what they do not
+
+- **Covered:** the rules with hand-computed values, accepted and rejected actions,
+  separate games, invalid tokens, rollbacks, locked databases, two windows and the
+  full five-day games.
+- **How:** storage tests use temporary SQLite files. Interface tests drive
+  `app.py` with Streamlit's `AppTest`.
+- **Not covered:** a real browser, Streamlit Community Cloud, page layout and
+  narrow screens. These are checked by hand with `docs/acceptance-checklist.md`.
+
 ## Known limits
 
 - Games are stored temporarily and can be lost. A bookmark does not guarantee
