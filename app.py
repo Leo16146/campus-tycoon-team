@@ -245,7 +245,8 @@ def show_leaderboard(scenario):
         st.caption("No results published yet.")
         return
     st.table([{"Rank": e["rank"], "Nickname": e["nickname"],
-               "Overall gain / loss": euros(e["score"])} for e in entries])
+               "Overall gain / loss": euros(e["score"])} for e in entries],
+             border="horizontal", hide_index=True)
 
 
 def delete_current_game(token):
@@ -272,8 +273,9 @@ def stop_with_link_error(message):
     st.stop()
 
 
-st.set_page_config(page_title="Campus Kiosk")
-st.title("Campus Kiosk")
+st.set_page_config(page_title="Campus Week", page_icon="☕")
+st.title("Campus Week", icon=":material/local_cafe:")
+st.markdown(":gray[Run a campus kiosk for five trading days.]")
 
 # A malformed link is rejected before the database is opened.
 if "game" in st.query_params:
@@ -294,15 +296,21 @@ if "game" not in st.query_params:
     show_notices()
     with st.container(border=True):
         st.markdown(HOW_TO_PLAY)
-    st.subheader("Start a private game")
-    st.write("Each game has its own private link. Anyone with the link can play or delete the game.")
-    scenario = st.radio("Scenario", list(SCENARIOS), format_func=SCENARIOS.__getitem__, key="scenario")
-    st.button("Start game", type="primary", on_click=start_game, args=(scenario,))
-    st.subheader("Leaderboards")
-    for key, label in SCENARIOS.items():
-        st.markdown(f"**{label}**")
-        show_leaderboard(key)
-    st.caption(LEADERBOARD_NOTE)
+    with st.container(border=True):
+        st.subheader("Start a private game")
+        st.write("Each game has its own private link. Anyone with the link can play or "
+                 "delete the game.")
+        scenario = st.radio("Scenario", list(SCENARIOS), format_func=SCENARIOS.__getitem__,
+                            key="scenario", horizontal=True)
+        st.button("Start game", type="primary", icon=":material/play_arrow:",
+                  on_click=start_game, args=(scenario,))
+    with st.container(border=True):
+        st.subheader("Leaderboards")
+        for column, (key, label) in zip(st.columns(len(SCENARIOS)), SCENARIOS.items()):
+            with column:
+                st.markdown(f"**{label}**")
+                show_leaderboard(key)
+        st.caption(LEADERBOARD_NOTE)
     st.stop()
 
 token = st.query_params["game"]
@@ -322,125 +330,136 @@ st.caption(f"Scenario: {SCENARIOS[game['scenario']]}")
 st.caption("Bookmark this page to continue later. Games are stored temporarily on the server "
            "and may be removed, for example after a restart.")
 left, right = st.columns(2)
-left.metric("Cash", euros(game["cash"]))
-right.metric("Trading day", f"{day} of 5" if day <= 5 else "Complete")
+left.metric("Cash", euros(game["cash"]), border=True)
+right.metric("Trading day", f"{day} of 5" if day <= 5 else "Complete", border=True)
 st.progress((day - 1) / 5, text=f"{day - 1} of 5 days completed")
 
-st.subheader("Inventory")
-st.table([{"Product": PRODUCT_LABELS[p["name"]], "Stock": p["stock"], "Unit cost": euros(p["cost"]),
-           "Reference price": euros(p["reference"]), "Selling price": euros(p["price"])}
-          for p in products])
+with st.container(border=True):
+    st.subheader("Inventory")
+    st.table([{"Product": PRODUCT_LABELS[p["name"]], "Stock": p["stock"],
+               "Unit cost": euros(p["cost"]), "Reference price": euros(p["reference"]),
+               "Selling price": euros(p["price"])} for p in products],
+             border="horizontal", hide_index=True)
 
 show_notices()
 if history:
-    st.info(last_day_summary(history, day, game["scenario"]))
+    st.info(last_day_summary(history, day, game["scenario"]), icon=":material/insights:")
 
 if day <= 5:
     event_name, tiers = todays_event(game["scenario"], day)
-    st.subheader(f"Today's event: {event_name}")
-    st.table([{"Product": PRODUCT_LABELS[p["name"]],
-               "Demand at or below reference price": tiers[p["name"]][0],
-               "Demand above reference price, up to and including twice it": tiers[p["name"]][1]}
-              for p in products])
-    st.caption("Above twice the reference price, demand is 0. At twice the reference price, "
-               "each unit earns three times as much gross profit as at the reference price. "
-               "Sales are limited to the stock on hand; unsold stock stays in the inventory.")
-    st.subheader("Plan today")
-    st.caption("Enter purchases and selling prices for all products, check the preview, "
-               "then apply them together. Nothing is saved before you apply.")
-    fill_draft(products)
-    total = 0
-    for product in products:
-        name = product["name"]
-        buy_col, price_col = st.columns(2)
-        quantity = buy_col.number_input(f"Buy {PRODUCT_LABELS[name]}", min_value=0, step=1,
-                                        key=f"buy_{name}")
-        text = price_col.text_input(f"{PRODUCT_LABELS[name]} selling price (€)", max_chars=21,
-                                    key=f"price_{name}")
-        st.caption(preview_text(product, quantity, text, tiers[name]))
-        total += quantity * product["cost"]
-    st.write(f"Total purchase cost: **{euros(total)}** · "
-             f"Cash after purchases: **{euros(game['cash'] - total)}**")
-    if total > game["cash"]:
-        st.warning("The total purchase cost is more than your cash.")
-    changed = draft_changed(saved_prices)
-    apply_col, discard_col = st.columns(2)
-    apply_col.button("Apply purchases and prices", on_click=apply_plan,
-                     args=(token, day, saved_prices, seen),
-                     type="primary" if changed else "secondary")
-    discard_col.button("Discard changes", on_click=clear_draft, disabled=not changed)
-    st.subheader("Trading")
-    st.button("Start trading day", type="primary", on_click=trade_day,
-              args=(token, day, saved_prices, seen), disabled=changed)
-    if changed:
-        st.caption("Apply or discard your changes before trading.")
+    with st.container(border=True):
+        st.subheader(f"Today's event: {event_name}")
+        st.table([{"Product": PRODUCT_LABELS[p["name"]],
+                   "Demand at or below reference price": tiers[p["name"]][0],
+                   "Demand above reference price, up to and including twice it": tiers[p["name"]][1]}
+                  for p in products], border="horizontal", hide_index=True)
+        st.caption("Above twice the reference price, demand is 0. At twice the reference price, "
+                   "each unit earns three times as much gross profit as at the reference price. "
+                   "Sales are limited to the stock on hand; unsold stock stays in the inventory.")
+    with st.container(border=True):
+        st.subheader("Plan today")
+        st.caption("Enter purchases and selling prices for all products, check the preview, "
+                   "then apply them together. Nothing is saved before you apply.")
+        fill_draft(products)
+        total = 0
+        for product in products:
+            name = product["name"]
+            buy_col, price_col = st.columns(2)
+            quantity = buy_col.number_input(f"Buy {PRODUCT_LABELS[name]}", min_value=0, step=1,
+                                            key=f"buy_{name}")
+            text = price_col.text_input(f"{PRODUCT_LABELS[name]} selling price (€)",
+                                        max_chars=21, key=f"price_{name}")
+            st.caption(preview_text(product, quantity, text, tiers[name]))
+            total += quantity * product["cost"]
+        st.write(f"Total purchase cost: **{euros(total)}** · "
+                 f"Cash after purchases: **{euros(game['cash'] - total)}**")
+        if total > game["cash"]:
+            st.warning("The total purchase cost is more than your cash.")
+        changed = draft_changed(saved_prices)
+        apply_col, discard_col = st.columns(2)
+        apply_col.button("Apply purchases and prices", icon=":material/shopping_cart_checkout:",
+                         on_click=apply_plan, args=(token, day, saved_prices, seen),
+                         type="primary" if changed else "secondary")
+        discard_col.button("Discard changes", icon=":material/undo:", on_click=clear_draft,
+                           disabled=not changed)
+    with st.container(border=True):
+        st.subheader("Trading")
+        st.button("Start trading day", type="primary", icon=":material/storefront:",
+                  on_click=trade_day, args=(token, day, saved_prices, seen), disabled=changed)
+        if changed:
+            st.caption("Apply or discard your changes before trading.")
 
 else:
     stock_value, result = final_result(game["cash"], products)
-    st.subheader("Final results")
-    cash_col, stock_col, result_col = st.columns(3)
-    cash_col.metric("Final cash", euros(game["cash"]))
-    stock_col.metric("Remaining stock at cost", euros(stock_value))
-    result_col.metric("Overall gain / loss", euros(result))
-    st.caption("Final cash + remaining stock at purchase cost − €100.00 starting cash.")
-    st.subheader("Sales by product")
-    summary = []
-    for product in products:
-        name = product["name"]
-        sales = [row for row in history if row["name"] == name]
-        summary.append(sales_summary_row(PRODUCT_LABELS[name], sales))
-    summary.append(sales_summary_row("Total", history))
-    st.table(summary)
-
     baseline_days, baseline_result = baseline_results(game["scenario"])
-    st.subheader("Comparison with the baseline strategy")
-    you_col, baseline_col, difference_col = st.columns(3)
-    you_col.metric("Your overall gain / loss", euros(result))
-    baseline_col.metric("Baseline overall gain / loss", euros(baseline_result))
-    difference_col.metric("Difference (you − baseline)", signed_euros(result - baseline_result))
-    st.caption("Baseline strategy: a simple reference that keeps every selling price at the "
-               "reference price and restocks each day to the demand at that price. "
-               "It is not the best possible strategy.")
-    comparison = []
-    for number, (baseline_profit, _) in enumerate(baseline_days, start=1):
-        yours = daily_gross_profit(history, number)
-        comparison.append({"Day": number, "Your gross profit": euros(yours),
-                           "Baseline gross profit": euros(baseline_profit),
-                           "Difference": signed_euros(yours - baseline_profit)})
-    st.table(comparison)
+    with st.container(border=True):
+        st.subheader("Final results")
+        you_col, baseline_col, difference_col = st.columns(3)
+        you_col.metric("Overall gain / loss", euros(result), border=True)
+        baseline_col.metric("Baseline overall gain / loss", euros(baseline_result), border=True)
+        difference_col.metric("Difference (you − baseline)",
+                              signed_euros(result - baseline_result), border=True)
+        st.caption(f"Final cash {euros(game['cash'])} + remaining stock at cost "
+                   f"{euros(stock_value)} − €100.00 starting cash = {euros(result)}.")
+        st.caption("Baseline strategy: a simple reference that keeps every selling price at the "
+                   "reference price and restocks each day to the demand at that price. "
+                   "It is not the best possible strategy.")
+    with st.container(border=True):
+        st.subheader("Sales by product")
+        summary = []
+        for product in products:
+            name = product["name"]
+            sales = [row for row in history if row["name"] == name]
+            summary.append(sales_summary_row(PRODUCT_LABELS[name], sales))
+        summary.append(sales_summary_row("Total", history))
+        st.table(summary, border="horizontal", hide_index=True)
+    with st.container(border=True):
+        st.subheader("You vs. the baseline, day by day")
+        comparison = []
+        for number, (baseline_profit, _) in enumerate(baseline_days, start=1):
+            yours = daily_gross_profit(history, number)
+            comparison.append({"Day": number, "Your gross profit": euros(yours),
+                               "Baseline gross profit": euros(baseline_profit),
+                               "Difference": signed_euros(yours - baseline_profit)})
+        st.table(comparison, border="horizontal", hide_index=True)
 
-    st.subheader(f"Leaderboard: {SCENARIOS[game['scenario']]}")
-    try:
-        entry = db.my_entry(DATABASE, token)
-    except db.DatabaseBusy:
-        stop_when_busy()
-    if entry is None:
-        st.text_input("Nickname for the leaderboard", max_chars=20, key="nickname",
-                      help="3–20 letters, digits, spaces, _ or -. Shown publicly with your result.")
-        st.button("Publish my result", on_click=publish, args=(token,))
-    else:
-        st.success(f"Your rank: {entry['rank']} of {entry['total']} (as {entry['nickname']})")
-        st.button("Remove my result", on_click=withdraw, args=(token,))
-    show_leaderboard(game["scenario"])
-    st.caption(LEADERBOARD_NOTE)
+    with st.container(border=True):
+        st.subheader(f"Leaderboard: {SCENARIOS[game['scenario']]}")
+        try:
+            entry = db.my_entry(DATABASE, token)
+        except db.DatabaseBusy:
+            stop_when_busy()
+        if entry is None:
+            st.text_input("Nickname for the leaderboard", max_chars=20, key="nickname",
+                          help="3–20 letters, digits, spaces, _ or -. Shown publicly with your result.")
+            st.button("Publish my result", icon=":material/emoji_events:", on_click=publish,
+                      args=(token,))
+        else:
+            st.success(f"Your rank: {entry['rank']} of {entry['total']} (as {entry['nickname']})")
+            st.button("Remove my result", icon=":material/remove_circle:", on_click=withdraw,
+                      args=(token,))
+        show_leaderboard(game["scenario"])
+        st.caption(LEADERBOARD_NOTE)
 
 if history:
-    st.subheader("Daily results")
-    # The file name contains only the scenario, never the private game link.
-    st.download_button("Download daily results (CSV)", data=history_csv(history),
-                       file_name=f"campus-week-{game['scenario'].replace('_', '-')}.csv",
-                       mime="text/csv")
-    for completed_day in range(day - 1, 0, -1):
-        lines = [row for row in history if row["day"] == completed_day]
-        totals = {key: sum(row[key] for row in lines)
-                  for key in ("sold", "revenue", "expense", "profit")}
-        with st.expander(f"Day {completed_day}", expanded=completed_day == day - 1):
-            report = [dict(row, label=PRODUCT_LABELS[row["name"]]) for row in lines]
-            report.append({"label": "Total", **totals})
-            st.table([{"Product": row["label"], "Units sold": row["sold"],
-                       "Revenue": euros(row["revenue"]), "Cost of goods sold": euros(row["expense"]),
-                       "Gross profit": euros(row["profit"])}
-                      for row in report])
+    with st.container(border=True):
+        st.subheader("Daily results")
+        # The file name contains only the scenario, never the private game link.
+        st.download_button("Download daily results (CSV)", data=history_csv(history),
+                           file_name=f"campus-week-{game['scenario'].replace('_', '-')}.csv",
+                           mime="text/csv", icon=":material/download:")
+        for completed_day in range(day - 1, 0, -1):
+            lines = [row for row in history if row["day"] == completed_day]
+            totals = {key: sum(row[key] for row in lines)
+                      for key in ("sold", "revenue", "expense", "profit")}
+            with st.expander(f"Day {completed_day}", expanded=completed_day == day - 1):
+                report = [dict(row, label=PRODUCT_LABELS[row["name"]]) for row in lines]
+                report.append({"label": "Total", **totals})
+                st.table([{"Product": row["label"], "Units sold": row["sold"],
+                           "Revenue": euros(row["revenue"]),
+                           "Cost of goods sold": euros(row["expense"]),
+                           "Gross profit": euros(row["profit"])} for row in report],
+                         border="horizontal", hide_index=True)
 
 st.divider()
 if st.session_state.get("confirm_delete"):
@@ -448,9 +467,10 @@ if st.session_state.get("confirm_delete"):
                "and this link will stop working.")
     cancel, confirm = st.columns(2)
     cancel.button("Cancel", on_click=cancel_delete)
-    confirm.button("Delete game", on_click=delete_current_game, args=(token,))
+    confirm.button("Delete game", type="primary", icon=":material/delete:",
+                   on_click=delete_current_game, args=(token,))
 else:
     delete_col, other_col = st.columns(2)
-    delete_col.button("Delete this game", on_click=ask_delete)
-    other_col.button("Start another game", on_click=leave_game)
+    delete_col.button("Delete this game", icon=":material/delete:", on_click=ask_delete)
+    other_col.button("Start another game", icon=":material/add:", on_click=leave_game)
     st.caption("Your current game is kept. Bookmark its link before leaving.")

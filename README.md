@@ -53,6 +53,9 @@ branch `p0-token-spike`). It is not the finished app.
   computed on the server from the saved game; only the nickname comes from the
   browser. Equal scores share a rank. You can remove your entry; deleting the
   game removes it too.
+- **Clear layout:** each step is a card (inventory, today's event, plan, trading,
+  results), the next step is always the highlighted button, and every number on the
+  final screen appears once, with the calculation shown below it.
 - **CSV download** of your daily results (the file name contains only the scenario,
   never the private link).
 - **Delete with confirmation**, *Start another game*, and clear messages for
@@ -106,6 +109,7 @@ Git. The app needs no secrets or API keys.
 | `specs/campus-week.md` | Specification of the team extension with all expected values |
 | `docs/acceptance-checklist.md` | Manual check on the deployed app |
 | `docs/demo-script.md` | Plan for the live demo and questions for the walkthrough |
+| `.streamlit/config.toml` | Look of the app: warm coffee colours (every text/background pair has a contrast of at least 6:1), rounded cards, and only the viewer menu for visitors |
 | `.github/workflows/tests.yml` | Runs `uv sync --locked` and `uv run pytest` on GitHub for every push and pull request |
 | `specs/first-feature.md`, `docs/product-brief.html` | Documents of the original solo project |
 

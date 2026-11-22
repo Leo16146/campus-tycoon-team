@@ -1,4 +1,4 @@
-"""Campus Kiosk trading rules. All amounts are in cents."""
+"""Campus Week trading rules (the campus kiosk game). All amounts are in cents."""
 
 
 import csv

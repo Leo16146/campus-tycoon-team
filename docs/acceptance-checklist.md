@@ -26,7 +26,7 @@ Ergebnis je Zeile eintragen: ✅ wie erwartet, ❌ mit kurzer Beschreibung.
 
 | # | Schritt | Sollwert | Ergebnis |
 |---|---|---|---|
-| 1 | App-URL ohne Parameter öffnen | Startseite mit „How to play“ (Goal, Each day, Score) und den Szenarien Exam Week und Heatwave | |
+| 1 | App-URL ohne Parameter öffnen | Titel „Campus Week“ im warmen Farbschema, Startseite mit „How to play“ (Goal, Each day, Score) und den Szenarien Exam Week und Heatwave | |
 | 2 | Exam Week wählen, „Start game“ | `?game=…` in der Adresszeile. Cash €100.00, „1 of 5“, Lager 0/0/0. „Today's event: Normal day“ mit 10 / 5 für jedes Produkt. Buy-Felder 0, Preisfelder 4.00 / 1.00 / 2.00 | |
 | 3 | Buy Coffee 10, Coffee-Preis 8.00 eintippen, **nicht** anwenden | Vorschau Coffee: „Demand: 5 · In stock: 0 · Expected sales: 5 · Cost: €20.00“. Total €20.00, Cash after €80.00. „Start trading day“ ist gesperrt mit Hinweis „Apply or discard …“. Cash oben weiter €100.00 | |
 | 4 | „Discard changes“ | Buy 0, Coffee-Preis 4.00, Handel freigegeben | |
