@@ -284,3 +284,18 @@ def test_edited_price_persists_and_changes_sales(path):
     assert len(page.expander) == 1
     assert page.table[-1].value.iloc[-1].tolist() == [
         "Total", 5, "€20.05", "€10.00", "€10.05"]
+
+
+def test_old_messages_do_not_follow_to_the_start_page(path):
+    # The same game is deleted in two windows. The second window reports the invalid
+    # link; after "Start a new game" the start page shows no leftover error.
+    token = db.create_game(path, "exam_week")
+    first, second = open_app(token), open_app(token)
+    click(first, "Delete this game")
+    click(second, "Delete this game")   # both windows show the confirmation
+    click(first, "Delete game")
+    click(second, "Delete game")
+    assert "not valid" in second.error[0].value
+    click(second, "Start a new game")
+    assert labels(second) == ["Start game"]
+    assert not second.error

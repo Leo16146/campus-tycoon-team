@@ -175,6 +175,8 @@ def start_game(scenario):
 
 
 def leave_game():
+    """Back to the start page. Messages that belonged to the old game are dropped."""
+    st.session_state.pop("notices", None)
     st.query_params.clear()
 
 
