@@ -9,6 +9,8 @@ import db
 
 
 APP = Path(__file__).resolve().parents[1] / "app.py"
+# AppTest runs use a 60 s timeout: the first run in a fresh environment imports
+# pandas and pyarrow and took about 16 s in a clean clone.
 
 
 @pytest.fixture
@@ -20,7 +22,7 @@ def path(tmp_path, monkeypatch):
 
 
 def open_app(token=None):
-    page = AppTest.from_file(str(APP), default_timeout=10)
+    page = AppTest.from_file(str(APP), default_timeout=60)
     if token is not None:
         page.query_params["game"] = token
     return page.run()
