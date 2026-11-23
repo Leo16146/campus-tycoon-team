@@ -260,10 +260,11 @@ def show_leaderboard(scenario):
 
 
 def show_my_entry(token):
-    """Publish form or own rank. A busy database only affects this part of the page."""
+    """Publish form or own rank. A busy database, or a game deleted in another window
+    while this page loads, only affects this part of the page."""
     try:
         entry = db.my_entry(DATABASE, token)
-    except db.DatabaseBusy:
+    except USER_ERRORS:
         st.caption("Your leaderboard entry could not be loaded right now. "
                    "Please reload the page in a moment.")
         return
