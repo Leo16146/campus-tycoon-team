@@ -275,3 +275,19 @@ def test_busy_leaderboard_does_not_hide_the_rest_of_the_final_screen(path, monke
     assert "The leaderboard is busy right now. Please reload the page in a moment." in captions
     assert [b.label for b in page.button][-2:] == ["Delete this game", "Start another game"]
     assert page.expander[0].label == "Day 5"
+
+
+def test_game_deleted_while_the_final_screen_loads(path, monkeypatch):
+    # Another window deletes the game between loading it and loading its leaderboard entry.
+    token = play(path, "exam_week", WINNING_PLAN)
+    real = db.my_entry
+
+    def deleted_meanwhile(path_, token_):
+        db.delete_game(path_, token_)
+        return real(path_, token_)
+
+    monkeypatch.setattr(db, "my_entry", deleted_meanwhile)
+    page = open_app(token)
+    assert not page.exception
+    assert ("Your leaderboard entry could not be loaded right now. Please reload the page "
+            "in a moment.") in [c.value for c in page.caption]

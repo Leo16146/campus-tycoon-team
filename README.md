@@ -249,7 +249,7 @@ keeps the rules testable with small numbers.
 
 ## Verification
 
-**Automated** (`uv run pytest`, 175 tests, all passing on 23.11.2026). GitHub
+**Automated** (`uv run pytest`, 176 tests, all passing on 24.11.2026). GitHub
 Actions (`.github/workflows/tests.yml`) runs the same tests on every push and pull
 request:
 
